@@ -53,11 +53,29 @@ class SimulationState:
 
 
 def load_default_config(config_path: str) -> dict[str, Any]:
-    with open(config_path, "r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh)
+    """Load config from YAML file with fallback defaults."""
+    try:
+        with open(config_path, "r", encoding="utf-8") as fh:
+            return yaml.safe_load(fh)
+    except FileNotFoundError:
+        # Fallback configuration if file not found
+        return {
+            "base_arrival_rate": 6.0,
+            "base_solar_capacity_kw": 120.0,
+            "emergency_arrival_prob": 0.04,
+            "grid_limit_kw": 1800.0,
+            "episode_length": 300,
+            "num_stations": 2,
+        }
+    except Exception as e:
+        raise RuntimeError(f"Failed to load config from {config_path}: {str(e)}")
 
 
 def build_simulation(config: dict[str, Any], seed: int = 42) -> SimulationState:
-    env = MultiAgentEVChargingGridEnv(config=config)
-    obs, _ = env.reset(seed=seed)
-    return SimulationState(env=env, observation=obs)
+    """Build simulation with error handling."""
+    try:
+        env = MultiAgentEVChargingGridEnv(config=config)
+        obs, _ = env.reset(seed=seed)
+        return SimulationState(env=env, observation=obs)
+    except Exception as e:
+        raise RuntimeError(f"Failed to build simulation: {str(e)}")

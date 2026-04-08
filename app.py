@@ -254,17 +254,27 @@ st.markdown(
 _CONFIG_PATH = Path(__file__).resolve().parent / "ev_charging_grid_env" / "config" / "config.yaml"
 
 
+@st.cache_resource
+def _load_default_config_cached() -> dict[str, Any]:
+    """Load config once and cache it."""
+    return load_default_config(str(_CONFIG_PATH))
+
+
 def _ensure_state() -> None:
     if "sim_state" not in st.session_state:
-        config = load_default_config(str(_CONFIG_PATH))
-        st.session_state.config = config
-        st.session_state.sim_state = build_simulation(config, seed=42)
-        st.session_state.selected_policy = "Heuristic"
-        st.session_state.running = False
-        st.session_state.refresh_ms = 220
-        st.session_state.train_log: list[str] = []
-        st.session_state.train_results: dict[str, Any] = {}
-        st.session_state.training_running = False
+        try:
+            config = _load_default_config_cached()
+            st.session_state.config = config
+            st.session_state.sim_state = build_simulation(config, seed=42)
+            st.session_state.selected_policy = "Heuristic"
+            st.session_state.running = False
+            st.session_state.refresh_ms = 220
+            st.session_state.train_log: list[str] = []
+            st.session_state.train_results: dict[str, Any] = {}
+            st.session_state.training_running = False
+        except Exception as e:
+            st.error(f"Failed to initialize simulation: {str(e)}")
+            st.stop()
 
 
 _ensure_state()
