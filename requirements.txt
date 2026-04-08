@@ -1,0 +1,12 @@
+gymnasium
+pettingzoo
+numpy
+pydantic
+matplotlib
+pyyaml
+torch
+tensorboard
+streamlit
+plotly
+pandas
+# OpenEnv-specific dependency can be added when framework package/version is finalized.

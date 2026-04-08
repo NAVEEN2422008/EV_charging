@@ -1,0 +1,10 @@
+gymnasium
+pettingzoo
+numpy
+matplotlib
+pyyaml
+torch
+tensorboard
+streamlit
+plotly
+pandas

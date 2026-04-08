@@ -1,0 +1,36 @@
+base_arrival_rate: 0.6
+base_price_per_kwh: 0.35
+base_solar_capacity_kw: 120.0
+charge_rate_per_vehicle_kw: 50.0
+city_radius_km: 12.0
+completion_reward_weight: 1.8
+emergency_arrival_prob: 0.04
+emergency_priority_bonus: 4.0
+episode_length: 300
+fast_charge_kw: 120.0
+fast_service_weight: 0.08
+grid_capacity_kw_per_station: 250.0
+grid_limit_kw: 2400.0
+grid_overload_penalty_weight: 0.04
+max_price_per_kwh: 1.0
+max_slots_per_station: 4
+max_wait_timesteps: 45
+min_price_per_kwh: 0.1
+num_stations: 10
+price_step: 0.02
+queue_penalty_weight: 0.15
+required_kwh_max: 65.0
+required_kwh_min: 8.0
+reward_clip: 50.0
+sim_minutes_per_step: 1.0
+slow_charge_kw: 45.0
+solar_priority_weight: 0.3
+solar_station_ratio: 0.5
+station_outage_probability: 0.005
+timeout_penalty_weight: 2.5
+traffic_pattern: mixed
+travel_distance_penalty_weight: 0.08
+weather_probs:
+  cloudy: 0.3
+  rainy: 0.2
+  sunny: 0.5

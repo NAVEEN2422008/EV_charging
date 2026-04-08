@@ -1,0 +1,23 @@
+env:
+  num_stations: 10
+  episode_length: 300
+  station_outage_probability: 0.004
+  base_arrival_rate: 5.8
+  emergency_arrival_prob: 0.035
+  reward_clip: 50.0
+
+training:
+  total_steps: 22000
+  rollout_steps: 512
+  batch_size: 128
+  epochs: 6
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_coef: 0.22
+  entropy_coef: 0.008
+  value_coef: 0.6
+  max_grad_norm: 0.5
+  lr: 0.00025
+  reward_norm: true
+  lr_anneal: true
+  min_lr_scale: 0.1

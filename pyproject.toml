@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ev-charging-grid-env"
+version = "0.1.0"
+description = "Multi-agent EV charging grid optimization environment for RL research."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "gymnasium",
+  "pettingzoo",
+  "numpy",
+  "matplotlib",
+  "pyyaml",
+  "torch",
+  "tensorboard",
+  "streamlit",
+  "plotly",
+  "pandas",
+]
+
+[tool.setuptools.packages.find]
+include = ["ev_charging_grid_env*"]
