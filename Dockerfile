@@ -11,4 +11,5 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY . /app
 RUN pip install --no-cache-dir -e .
 
-CMD ["python", "-m", "ev_charging_grid_env.examples.run_rule_based_agent"]
+# Run Streamlit app for HuggingFace Spaces
+CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
