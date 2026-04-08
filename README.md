@@ -1,3 +1,13 @@
+---
+title: Multi-Agent EV Charging Grid Optimizer
+emoji: ⚡
+colorFrom: purple
+colorTo: green
+sdk: docker
+app_file: app.py
+pinned: false
+---
+
 # ⚡ Multi-Agent EV Charging Grid Optimizer
 
 > **An AI-powered, multi-agent reinforcement learning environment for urban electric vehicle charging network optimization.**
