@@ -102,7 +102,7 @@ class PettingZooEVChargingEnv(AECEnv):
             return self.gym_env.action_space["coordinator_action"]
         return self._station_action_space
 
-    def reset(self, seed: int | None = None, options: dict[str, Any] | None = None) -> None:
+    def reset(self, seed: int | None = None, options: dict[str, Any] | None = None) -> dict[str, Any]:
         obs, _ = self.gym_env.reset(seed=seed, options=options)
         self._last_obs = obs
         self.agents = self.possible_agents[:]
@@ -114,6 +114,9 @@ class PettingZooEVChargingEnv(AECEnv):
         self._actions = {}
         self._agent_selector = AgentSelector(self.agents)
         self.agent_selection = self._agent_selector.reset()
+        
+        # Return observations for all agents (required by AEC standard)
+        return {agent: self.observe(agent) for agent in self.agents}
 
     def observe(self, agent: str) -> dict[str, Any]:
         assert self._last_obs is not None
