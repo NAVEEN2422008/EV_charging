@@ -14,6 +14,7 @@ import json
 import tempfile
 import time
 import threading
+from contextlib import redirect_stdout, redirect_stderr
 from pathlib import Path
 from typing import Any
 
@@ -263,9 +264,12 @@ def _load_default_config_cached() -> dict[str, Any]:
 def _ensure_state() -> None:
     if "sim_state" not in st.session_state:
         try:
-            config = _load_default_config_cached()
-            st.session_state.config = config
-            st.session_state.sim_state = build_simulation(config, seed=42)
+            # Suppress output during initialization
+            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                config = _load_default_config_cached()
+                st.session_state.config = config
+                st.session_state.sim_state = build_simulation(config, seed=42)
+            
             st.session_state.selected_policy = "Heuristic"
             st.session_state.running = False
             st.session_state.refresh_ms = 220
@@ -838,36 +842,46 @@ def _tab_train() -> None:
 
 def main() -> None:
     # Header
-    st.markdown(
-        '<div class="main-title">⚡ Multi-Agent EV Charging Grid Optimizer</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="main-subtitle">'
-        "AI-powered real-time charging grid management with PPO & MAPPO reinforcement learning"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    try:
+        st.markdown(
+            '<div class="main-title">⚡ Multi-Agent EV Charging Grid Optimizer</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            '<div class="main-subtitle">'
+            "AI-powered real-time charging grid management with PPO & MAPPO reinforcement learning"
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
-    policy_name, checkpoint, step_batch = _sidebar()
-    st.session_state.selected_policy = policy_name
+        policy_name, checkpoint, step_batch = _sidebar()
+        st.session_state.selected_policy = policy_name
 
-    tab_live, tab_analytics, tab_compare, tab_train = st.tabs(
-        ["🔴 Live Operations", "📊 Analytics", "⚔️ Compare Policies", "🤖 Train AI"]
-    )
+        tab_live, tab_analytics, tab_compare, tab_train = st.tabs(
+            ["🔴 Live Operations", "📊 Analytics", "⚔️ Compare Policies", "🤖 Train AI"]
+        )
 
-    with tab_live:
-        _tab_live_ops(policy_name, checkpoint, step_batch)
+        with tab_live:
+            _tab_live_ops(policy_name, checkpoint, step_batch)
 
-    with tab_analytics:
-        _tab_analytics()
+        with tab_analytics:
+            _tab_analytics()
 
-    with tab_compare:
-        _tab_compare()
+        with tab_compare:
+            _tab_compare()
 
-    with tab_train:
-        _tab_train()
+        with tab_train:
+            _tab_train()
+    except Exception as e:
+        st.error(f"⚠️ Application Error: {str(e)}")
+        import traceback
+        st.write(traceback.format_exc())
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        st.error(f"Critical Error: {str(e)}")
+        import traceback
+        st.write(traceback.format_exc())
