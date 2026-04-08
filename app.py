@@ -264,11 +264,26 @@ def _load_default_config_cached() -> dict[str, Any]:
 def _ensure_state() -> None:
     if "sim_state" not in st.session_state:
         try:
-            # Suppress output during initialization
-            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
-                config = _load_default_config_cached()
-                st.session_state.config = config
-                st.session_state.sim_state = build_simulation(config, seed=42)
+            # Comprehensive output suppression during initialization
+            import sys
+            from io import StringIO
+            
+            old_stdout = sys.stdout
+            old_stderr = sys.stderr
+            
+            try:
+                # Redirect both Python-level and context-level output
+                sys.stdout = StringIO()
+                sys.stderr = StringIO()
+                
+                with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                    config = _load_default_config_cached()
+                    st.session_state.config = config
+                    st.session_state.sim_state = build_simulation(config, seed=42)
+            finally:
+                # Restore stdout/stderr
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
             
             st.session_state.selected_policy = "Heuristic"
             st.session_state.running = False
@@ -278,6 +293,8 @@ def _ensure_state() -> None:
             st.session_state.training_running = False
         except Exception as e:
             st.error(f"Failed to initialize simulation: {str(e)}")
+            import traceback
+            st.write(traceback.format_exc())
             st.stop()
 
 
