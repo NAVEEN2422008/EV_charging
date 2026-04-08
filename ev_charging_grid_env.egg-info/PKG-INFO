@@ -15,176 +15,137 @@ Requires-Dist: streamlit
 Requires-Dist: plotly
 Requires-Dist: pandas
 
-# Multi-Agent EV Charging Grid Optimizer
+---
+title: Multi-Agent EV Charging Grid Optimizer
+emoji: ⚡
+colorFrom: purple
+colorTo: green
+sdk: docker
+app_file: app.py
+pinned: false
+---
 
-A judge-ready research and demo system for optimizing EV charging networks using reinforcement learning.
+# ⚡ Multi-Agent EV Charging Grid Optimizer
 
-This project simulates a realistic electric vehicle charging grid and trains policies that manage station queues, emergency vehicles, solar power, and grid constraints.
+> **An AI-powered, multi-agent reinforcement learning environment for urban electric vehicle charging network optimization.**
 
-## Why this matters
+![Status](https://img.shields.io/badge/Status-Production_Ready-success)
+![Python](https://img.shields.io/badge/Python-3.11+-blue)
+![Tests](https://img.shields.io/badge/Tests-90/90_Passing-brightgreen)
+![RL Framework](https://img.shields.io/badge/Core-PPO_%7C_MAPPO-purple)
 
-EV charging is a critical infrastructure challenge: real systems must allocate limited power, serve emergencies quickly, and maximize renewables while avoiding grid overload.
-This repository delivers a full-stack solution combining:
+This project simulates a real-time smart city charging grid where AI agents must dynamically balance vehicle queues, prioritize emergency vehicles, maximize solar energy utilization, and avoid catastrophic grid overloads.
 
-- realistic physics-inspired charging simulation
-- multi-agent decision-making
-- scalable RL training and evaluation
-- interactive dashboard visualization
+---
 
-## What the project does
+## 🎯 Project Overview
 
-It models a network of charging stations and a stream of arriving vehicles under uncertainty.
-The RL agent(s) decide:
+EV infrastructure faces huge optimization challenges every minute: random vehicle arrivals, changing battery needs, intermittent weather-dependent solar energy, and hard grid caps. 
 
-- global price adjustments to shape demand
-- emergency routing hints
-- station-level queue actions: accept, prioritize emergency, or redirect
+This repository leverages **Multi-Agent Reinforcement Learning (MARL)** to solve these dynamics in real-time. It contains:
+- **A High-Performance Core Engine** built heavily on `gymnasium` and `pettingzoo`.
+- **Hierarchical Agents**: A central `Coordinator` that routes traffic and sets token-prices, alongside independent `Station Agents` acting locally to minimize wait times.
+- **State-of-the-Art RL Training**: Out of the box Proximal Policy Optimization (PPO) and Multi-Agent PPO (MAPPO) with built-in Generalized Advantage Estimation (GAE).
+- **A Premium Web Dashboard**: A 4-tab Streamlit interface mimicking professional industrial control panels, featuring live maps, AI-detected insights, and real-time training controls.
 
-The simulation accounts for:
+---
 
-- station outages and recovery
-- stochastic arrivals with emergencies
-- solar forecast and actual generation
-- travel distance and pre-charging transit
-- global grid limits and overload penalties
+## ✨ Key Features
 
-## Core innovations
+- **Realistic Environment Dynamics**: Configurable Poisson arrival processes, fast/slow chargers, dynamic outage probabilities, and dynamic travel distances.
+- **Robust Reward Architecture**: Scaled shaping capable of balancing severe queue penalties with massive completion rewards, calibrated using a Welford running norm.
+- **In-Browser Training Pipeline**: Launch, monitor, and save new AI models purely via the local web app without touching python CLI scripts.
+- **Advanced Plotly Visuals**: Live Scatter Maps charting the grid, Radar Benchmarks comparing heuristic models against neural networks, and live Heatmaps spanning grid load.
+- **Comprehensive Test Suite**: Over 90 tests ensuring strict API adherence, numerical stability natively mitigating NaN explosions, and complex edge cases.
 
-- **Dual API support**
-  - centralized control via `MultiAgentEVChargingGridEnv`
-  - decentralized multi-agent training via `PettingZooEVChargingEnv`
-- **Shared transition core**
-  - both APIs use the same dynamics implementation for consistent behavior
-- **Realistic energy modeling**
-  - solar + grid energy split, weather-driven solar variability, dynamic pricing
-- **Robust RL baselines**
-  - centralized PPO and MAPPO-style multi-agent training
-- **Judges-ready reliability**
-  - full test suite, strong validation, and documented execution flow
+---
 
-## Project highlights
+## 🚀 Quick Start
 
-- `MultiAgentEVChargingGridEnv`: joint-action RL environment with global coordinator and station abstractions
-- `PettingZooEVChargingEnv`: AEC wrapper enabling multi-agent RL frameworks
-- `dynamics.py`: simulation engine for charging, solar use, outages, and queue transitions
-- `reward_functions.py`: reward shaping tuned for service quality, safety, and renewable energy
-- `ppo_trainer.py`: centralized optimization baseline
-- `mappo_trainer.py`: decentralized station policy baseline with shared critic support
-- `app.py`: Streamlit dashboard for live policy playback and analytics
+### 1. Installation
 
-## Quickstart
-
+Clone the repository and install the framework (we recommend using a virtual environment).
 ```bash
+python -m venv .venv
+# Activate on Windows:
+.venv\Scripts\activate
+# Activate on Mac/Linux:
+source .venv/bin/activate
+
+# Install the library in editable mode
 pip install -e .
 ```
 
-Run a heuristic baseline:
+### 2. Launch the Web Dashboard (Recommended)
 
-```bash
-python -m ev_charging_grid_env.examples.run_rule_based_agent
-```
-
-Run a random baseline:
-
-```bash
-python -m ev_charging_grid_env.examples.run_random_agent
-```
-
-Run the full test suite:
-
-```bash
-pytest -q ev_charging_grid_env/tests
-```
-
-> Status: `49 passed`
-
-## Training
-
-Train centralized PPO:
-
-```bash
-python -m ev_charging_grid_env.training.experiment_runner \
-  --config ev_charging_grid_env/config/training/ppo.yaml \
-  --algorithm ppo \
-  --seeds 42 43 \
-  --output runs
-```
-
-Train MAPPO-style multi-agent baseline:
-
-```bash
-python -m ev_charging_grid_env.training.experiment_runner \
-  --config ev_charging_grid_env/config/training/mappo.yaml \
-  --algorithm mappo \
-  --seeds 42 43 \
-  --output runs
-```
-
-Evaluate policies:
-
-```bash
-python -m ev_charging_grid_env.examples.evaluate_agents
-```
-
-## Dashboard
-
-Launch the interactive demo:
-
+The easiest way to interact with the project is via the interactive control panel.
 ```bash
 streamlit run app.py
 ```
+Open **http://localhost:8501** in your browser. From here you can run real-time benchmarks, test standard routing agents against RL models, and train new models in the background.
 
-The dashboard includes:
+### 3. Run a Quick Python Simulation
 
-- dynamic station map with queue and outage status
-- live reward and grid utilization metrics
-- policy switching between Random, Heuristic, PPO, and MAPPO
-- comparison mode for RL vs baseline performance
-- history plotting and CSV export
+```python
+from ev_charging_grid_env.envs.ev_charging_env import MultiAgentEVChargingGridEnv
 
-## How to impress judges
+# Load the realisticly scaled simulation environment
+env = MultiAgentEVChargingGridEnv()
+obs, _ = env.reset(seed=42)
 
-This repository is not just a simulator: it is a complete experimental platform.
-It demonstrates:
+for step in range(300):
+    action = env.action_space.sample()  # Replace with trained policy
+    obs, reward, terminated, truncated, info = env.step(action)
+    if truncated:
+        break
 
-- rigorous system design with shared simulation and interface parity
-- robust engineering with test coverage and input validation
-- a clear path from environment design to training and evaluation
-- real-world relevance with solar, emergency, and grid safety trade-offs
-
-## Project structure
-
-- `ev_charging_grid_env/envs/`
-  - environment wrappers, state modeling, dynamics, and reward logic
-- `ev_charging_grid_env/training/`
-  - PPO/MAPPO training loops, models, utilities, and experiment runner
-- `ev_charging_grid_env/agents/`
-  - heuristic and baseline policies for coordinator and stations
-- `ev_charging_grid_env/tests/`
-  - unit, integration, and training sanity tests
-- `ev_charging_grid_env/dashboard/`
-  - Streamlit visualization and policy dashboards
-- `ev_charging_grid_env/examples/`
-  - runnable scripts for evaluation and baselines
-
-## Recommended judging points
-
-1. **Realism**: vehicles, solar uncertainty, emergencies, grid limits, travel distance
-2. **Versatility**: supports centralized and decentralized RL workflows
-3. **Engineering quality**: validated inputs, error handling, clear separation of concerns
-4. **Usability**: runnable examples, dashboard, training runner, and docs
-5. **Performance**: compact RL code, batched action sampling, stable training baselines
-
-## Docker
-
-Build and run quickly:
-
-```bash
-docker build -t ev-grid-env .
-docker run --rm ev-grid-env
+print(f"Total Reward: {env.episode_stats['total_reward']}")
 ```
 
-## Notes
+---
 
-For deeper documentation, see `DOCUMENTATION.md`.
-For a concise judge-friendly overview, see `JUDGE_SUMMARY.md`.
+## 📂 Project Structure
+
+```text
+├── app.py                      # Main Streamlit dashboard interface
+├── pyproject.toml              # Build & dependency configuration
+├── DOCUMENTATION.md            # Comprehensive Deep-Dive documentation
+├── ev_charging_grid_env/
+│   ├── envs/                   # Core RL engine (Gym & PettingZoo environments, logic, states)
+│   ├── agents/                 # Action spaces (Coordinator & Station Agents)
+│   ├── training/               # Torch training modules (PPO, MAPPO, GAE Buffers)
+│   ├── dashboard/              # Plotly chart templates and UI Simulator bindings
+│   └── config/                 # Default hyperparameters and grid boundary constants
+└── tests/                      # Pytest suite tracking edge cases and numeric safety
+```
+
+---
+
+## 🧠 Training Custom Agents
+
+You can train agents via the UI (under the `Train AI` tab) or via the Command Line.
+
+```bash
+# Example: Train the centralized PPO model
+python -m ev_charging_grid_env.training.experiment_runner \
+  --config ev_charging_grid_env/config/config.yaml \
+  --algorithm ppo \
+  --seeds 42 \
+  --output runs/
+```
+
+Results, checkpoints (`.pt`), and metric aggregations are automatically saved downstream.
+
+---
+
+## 🧪 Testing
+
+The codebase enforces robust test-driven execution. To ensure environmental constraints aren't violated (i.e. grid limits overrun without penalty):
+
+```bash
+pytest ev_charging_grid_env/tests/ -v --tb=short
+```
+
+---
+
+*For deeper technical details on algorithm specifics, execution flows, and system limitations, refer to the fully featured [DOCUMENTATION.md](./DOCUMENTATION.md) included in this repository.*

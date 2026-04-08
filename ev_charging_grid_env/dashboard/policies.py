@@ -20,8 +20,8 @@ class PolicyBundle:
     note: str = ""
 
 
-class PPOPolicyAdapter:
-    """Fallback adapter for trained PPO checkpoints."""
+class PPOCoordinatorAdapter:
+    """Adapter for PPO/MAPPO coordinator."""
 
     def __init__(self, num_stations: int, checkpoint_path: str | None = None) -> None:
         self.num_stations = num_stations
@@ -29,14 +29,24 @@ class PPOPolicyAdapter:
         self.rng = np.random.default_rng(123)
         self.available = bool(checkpoint_path and Path(checkpoint_path).exists())
 
-    def coordinator_action(self, _: dict[str, Any]) -> dict[str, Any]:
-        # Baseline checkpoint adapter path; if unavailable, use stochastic policy.
+    def act(self, observation: dict[str, Any]) -> dict[str, Any]:
+        """Stochastic fallback policy for coordinator."""
         return {
             "price_deltas": self.rng.integers(0, 3, size=self.num_stations, dtype=np.int64),
             "emergency_target_station": int(self.rng.integers(0, self.num_stations + 1)),
         }
 
-    def station_action(self, *_: Any, **__: Any) -> int:
+
+class PPOStationAdapter:
+    """Adapter for PPO/MAPPO station."""
+
+    def __init__(self, checkpoint_path: str | None = None) -> None:
+        self.checkpoint_path = checkpoint_path
+        self.rng = np.random.default_rng(456)
+        self.available = bool(checkpoint_path and Path(checkpoint_path).exists())
+
+    def act(self, station_index: int, observation: dict[str, Any], coordinator_action: dict[str, Any]) -> int:
+        """Stochastic fallback policy for station."""
         return int(self.rng.integers(0, 4))
 
 
@@ -47,12 +57,11 @@ def build_policy_bundle(policy_name: str, num_stations: int, checkpoint_path: st
     if policy_name == "Heuristic":
         return PolicyBundle(HeuristicCoordinatorAgent(), [HeuristicStationAgent() for _ in range(num_stations)], "Heuristic")
     if policy_name in {"PPO", "MAPPO"}:
-        adapter = PPOPolicyAdapter(num_stations=num_stations, checkpoint_path=checkpoint_path)
-        coordinator = type("CoordinatorAdapter", (), {"act": adapter.coordinator_action})()
-        stations = [type("StationAdapter", (), {"act": adapter.station_action})() for _ in range(num_stations)]
+        coordinator = PPOCoordinatorAdapter(num_stations=num_stations, checkpoint_path=checkpoint_path)
+        stations = [PPOStationAdapter(checkpoint_path=checkpoint_path) for _ in range(num_stations)]
         note = (
             "Checkpoint path found; model inference is not wired yet, using stochastic fallback policy."
-            if adapter.available
+            if coordinator.available
             else "Checkpoint missing, using stochastic fallback policy."
         )
         return PolicyBundle(coordinator, stations, policy_name, note=note)

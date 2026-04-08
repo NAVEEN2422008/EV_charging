@@ -7,7 +7,6 @@ from typing import Any
 import numpy as np
 from gymnasium import spaces
 from pettingzoo import AECEnv
-from pettingzoo.utils.agent_selector import AgentSelector
 
 from ev_charging_grid_env.envs.communication import coordinator_broadcast
 from ev_charging_grid_env.envs.ev_charging_env import MultiAgentEVChargingGridEnv
@@ -16,6 +15,59 @@ from ev_charging_grid_env.envs.spaces import (
     build_station_action_space,
     build_station_observation_space,
 )
+
+
+class AgentSelector:
+    """Simple agent selector for maintaining turn order in AEC environments.
+    
+    Mimics the old pettingzoo.utils.agent_selector.AgentSelector API for
+    compatibility with pettingzoo 1.24.3+.
+    """
+
+    def __init__(self, agents: list[str]) -> None:
+        """Initialize agent selector with a list of agents.
+        
+        Args:
+            agents: List of agent names in order.
+        """
+        self.agents = agents
+        self.agent_index = 0
+
+    def reset(self) -> str:
+        """Reset to the first agent.
+        
+        Returns:
+            The first agent name.
+        """
+        self.agent_index = 0
+        return self.agents[0] if self.agents else None
+
+    def next(self) -> str:
+        """Move to the next agent in the turn order.
+        
+        Returns:
+            The next agent name, wrapping around if needed.
+        """
+        if not self.agents:
+            return None
+        self.agent_index = (self.agent_index + 1) % len(self.agents)
+        return self.agents[self.agent_index]
+
+    def is_last(self) -> bool:
+        """Check if the current agent is the last in the turn order.
+        
+        Returns:
+            True if current agent is the last, False otherwise.
+        """
+        return self.agent_index == len(self.agents) - 1
+
+    def is_first(self) -> bool:
+        """Check if the current agent is the first in the turn order.
+        
+        Returns:
+            True if current agent is the first, False otherwise.
+        """
+        return self.agent_index == 0
 
 
 class PettingZooEVChargingEnv(AECEnv):

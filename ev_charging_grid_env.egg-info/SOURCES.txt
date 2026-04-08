@@ -33,6 +33,7 @@ ev_charging_grid_env/simulation/curriculum.py
 ev_charging_grid_env/simulation/dataset_logger.py
 ev_charging_grid_env/simulation/episode_runner.py
 ev_charging_grid_env/simulation/visualization.py
+ev_charging_grid_env/tests/test_advanced.py
 ev_charging_grid_env/tests/test_agents_and_integration.py
 ev_charging_grid_env/tests/test_dashboard_policies.py
 ev_charging_grid_env/tests/test_determinism.py
