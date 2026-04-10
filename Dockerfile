@@ -11,5 +11,9 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY . /app
 RUN pip install --no-cache-dir -e .
 
-# Run Streamlit app for HuggingFace Spaces
-CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
+# Expose port 5000 for OpenEnv API server
+EXPOSE 5000
+
+# Run API server for OpenEnv validation
+# (Streamlit dashboard available separately in app.py for development)
+CMD ["python", "api_server.py", "--host", "0.0.0.0", "--port", "5000"]
