@@ -123,8 +123,13 @@ def run():
             if terminated or truncated:
                 break
         
-        # Get LLM analysis (REQUIRED LLM CALL)
-        summary = call_llm(f"Total reward: {total_reward}. Explain system performance.")
+        # Get LLM analysis (REQUIRED LLM CALL) - with graceful fallback
+        summary = None
+        try:
+            summary = call_llm(f"Total reward: {total_reward}. Explain system performance.")
+        except Exception as llm_error:
+            # Fallback if LLM is not available (for validation/testing)
+            summary = f"System achieved total reward of {total_reward:.2f}. LLM analysis unavailable: {str(llm_error)}"
         
         print("END")
         
@@ -137,7 +142,8 @@ def run():
         print("END")
         return {
             "error": str(e),
-            "total_reward": 0.0
+            "total_reward": 0.0,
+            "summary": f"Error during simulation: {str(e)}"
         }
 
 

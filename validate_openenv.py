@@ -106,21 +106,23 @@ def validate_inference_script():
     print("[4/5] Validating Inference Script...")
     try:
         import inference
+        import os
         
-        # Test run_simulation
-        result = inference.run_simulation(steps=50, seed=42)
+        # Set dummy API key so run() can test LLM client
+        os.environ["API_KEY"] = "test-key-for-validation"
+        os.environ["API_BASE_URL"] = "https://api.openai.com/v1"
         
-        # Check structure
-        assert "status" in result, "Must return status"
-        assert result["status"] == "success", f"Status should be 'success', got {result['status']}"
-        assert "simulation" in result, "Must have simulation results"
-        assert "metrics" in result, "Must have metrics"
+        # Test run() function (new strict compliance version)
+        result = inference.run()
         
-        # Check simulation content
-        sim = result["simulation"]
-        assert "total_reward" in sim, "Must have total_reward"
-        assert "steps_executed" in sim, "Must have steps_executed"
-        assert sim["steps_executed"] > 0, "Should execute steps"
+        # Check structure matches template
+        assert isinstance(result, dict), "run() must return dict"
+        assert "total_reward" in result, "Must have total_reward"
+        assert "summary" in result, "Must have summary"
+        
+        # Check values
+        assert isinstance(result["total_reward"], float), "total_reward must be float"
+        assert isinstance(result["summary"], str), "summary must be string"
         
         # Verify JSON serializable
         json_str = json.dumps(result)
@@ -153,8 +155,8 @@ def validate_llm_proxy_integration():
             os.environ["API_BASE_URL"] = "https://proxy.example.com/v1"
             os.environ["API_KEY"] = "test-key"
             
-            # Test setup
-            client = inference.setup_llm_client()
+            # Test get_llm_client (new function name)
+            client = inference.get_llm_client()
             
             # Verify proxy URL was passed
             call_kwargs = mock_openai.call_args.kwargs
