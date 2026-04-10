@@ -73,7 +73,12 @@ def validate_pettingzoo_wrapper():
         from ev_charging_grid_env.envs.pettingzoo_ev_env import PettingZooEVChargingEnv
         
         env = PettingZooEVChargingEnv()
-        obs, info = env.reset(seed=42)
+        
+        # AEC reset() returns observations dict {agent_name: observation}
+        obs_dict = env.reset(seed=42)
+        assert isinstance(obs_dict, dict), "AEC reset must return observations dict"
+        assert "coordinator" in obs_dict, "Must include coordinator agent"
+        assert all(f"station_{i}" in obs_dict for i in range(env.gym_env.num_stations)), "Must include all station agents"
         
         # Check agents exist
         assert hasattr(env, 'possible_agents'), "Must have possible_agents"
@@ -81,8 +86,13 @@ def validate_pettingzoo_wrapper():
         
         # Check AEC methods
         assert hasattr(env, 'agent_selection'), "Must have agent_selection"
-        assert hasattr(env, 'observe'), "Must have observe()"
-        assert hasattr(env, 'last'), "Must have last()"
+        assert hasattr(env, 'observe'), "Must have observe() method"
+        assert hasattr(env, 'step'), "Must have step() method"
+        
+        # Test one step
+        agent = env.agent_selection
+        action = env.action_space(agent).sample()
+        env.step(action)
         
         print("  ✅ PettingZoo AEC wrapper compliant")
         return True

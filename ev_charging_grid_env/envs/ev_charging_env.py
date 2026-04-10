@@ -150,7 +150,27 @@ class MultiAgentEVChargingGridEnv(gym.Env[dict[str, Any], dict[str, Any]]):
         terminated = False
         truncated = self.episode_state.time_step >= self.episode_state.episode_length
         info = {"events": events, "reward_components": reward_state, "episode_stats": self.episode_stats.copy()}
-        return self._build_observation(), float(reward), terminated, truncated, info
+        
+        # ──────────────────────────────────────────────────────────────────────────────
+        # NUMERICAL STABILITY CHECKS (SAFETY LAYER)
+        # ──────────────────────────────────────────────────────────────────────────────
+        
+        # Validate reward is finite
+        if np.isnan(reward) or np.isinf(reward):
+            reward = 0.0  # Clamp invalid rewards to 0
+            info["reward_clipped"] = True
+        else:
+            reward = float(np.clip(reward, -1e6, 1e6))  # Hard clip to reasonable bounds
+        
+        # Validate observation values don't contain NaN/Inf
+        obs = self._build_observation()
+        for key, val in obs.items():
+            if isinstance(val, np.ndarray):
+                if np.any(np.isnan(val)) or np.any(np.isinf(val)):
+                    obs[key] = np.nan_to_num(val, nan=0.0, posinf=1e6, neginf=-1e6)
+                    info[f"{key}_cleaned"] = True
+        
+        return obs, float(reward), terminated, truncated, info
 
     def _mean_wait(self) -> float:
         waits = [v.wait_time for station in self.episode_state.stations for v in station.queue]
