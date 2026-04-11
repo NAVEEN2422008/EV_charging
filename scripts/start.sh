@@ -12,18 +12,21 @@ echo "API server PID: $API_PID"
 # Give API server time to start
 sleep 3
 
-# Check if server is responding (health check)
+# Try to check if server is responding (health check)
 echo "Checking API server health..."
-if ! curl -s http://localhost:5000/health > /dev/null 2>&1; then
-    echo "WARNING: API server health check failed, but continuing..."
-    echo "API server logs:"
-    cat /tmp/api_server.log || echo "No logs available"
+if command -v curl &> /dev/null; then
+    if curl -s http://localhost:5000/health > /dev/null 2>&1; then
+        echo "✓ API server is responding"
+    else
+        echo "⚠ API server health check failed, but continuing..."
+        cat /tmp/api_server.log 2>/dev/null || echo "  (no logs available)"
+    fi
+else
+    echo "⚠ curl not available, skipping health check"
 fi
 
-echo "API server started successfully!"
-
-# Start Streamlit app on port 7860 in foreground
 echo "Starting Streamlit app on port 7860..."
+# Start Streamlit app on port 7860 in foreground
 streamlit run app.py --server.port 7860 --server.address 0.0.0.0 --server.enableXsrfProtection=false
 
 # Cleanup on exit
