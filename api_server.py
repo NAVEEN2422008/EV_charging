@@ -11,6 +11,7 @@ import logging
 from typing import Any
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import numpy as np
 
 from ev_charging_grid_env.envs.ev_charging_env import MultiAgentEVChargingGridEnv
@@ -20,6 +21,7 @@ from ev_charging_grid_env.envs.ev_charging_env import MultiAgentEVChargingGridEn
 # ──────────────────────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -252,6 +254,23 @@ def not_found(error: Any) -> tuple[dict[str, str], int]:
     }), 404
 
 
+@app.route("/", methods=["GET"])
+def root() -> dict[str, str]:
+    """Root endpoint."""
+    return jsonify({
+        "name": "EV Charging Grid Optimizer API",
+        "version": "1.0.0",
+        "endpoints": [
+            "GET /",
+            "GET /health",
+            "POST /reset",
+            "POST /step",
+            "GET /state",
+            "GET /info",
+        ]
+    })
+
+
 @app.errorhandler(405)
 def method_not_allowed(error: Any) -> tuple[dict[str, str], int]:
     """Handle 405 errors."""
@@ -259,6 +278,7 @@ def method_not_allowed(error: Any) -> tuple[dict[str, str], int]:
         "error": "Method not allowed",
         "path": request.path,
         "method": request.method,
+        "allowed_methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     }), 405
 
 
