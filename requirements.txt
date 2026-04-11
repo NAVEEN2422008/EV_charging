@@ -13,4 +13,3 @@ flask
 flask-cors
 openai
 requests
-# OpenEnv-specific dependency can be added when framework package/version is finalized.
