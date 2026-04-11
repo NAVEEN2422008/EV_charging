@@ -11,9 +11,11 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY . /app
 RUN pip install --no-cache-dir -e .
 
-# Expose port 7860 for Hugging Face Spaces
-EXPOSE 7860
+# Make startup script executable
+RUN chmod +x /app/scripts/start.sh
 
-# Run Streamlit app for Hugging Face Spaces
-# Streamlit automatically binds to 0.0.0.0 on port 7860
-CMD ["streamlit", "run", "app.py", "--server.port", "7860", "--server.address", "0.0.0.0", "--server.enableXsrfProtection=false"]
+# Expose ports: 5000 for API (OpenEnv), 7860 for Streamlit (HF Spaces)
+EXPOSE 5000 7860
+
+# Run startup script that begins both API server and Streamlit
+CMD ["/app/scripts/start.sh"]
