@@ -24,6 +24,60 @@ def call_llm(prompt):
     return response.choices[0].message.content
 
 
+def call_llm_analyze(episode_data):
+    """Analyze episode data with LLM."""
+    prompt = f"Analyze this episode performance: {episode_data}"
+    return call_llm(prompt)
+
+
+def run_simulation(steps=50, seed=None):
+    """Run simulation with specified parameters.
+    
+    Args:
+        steps: Number of simulation steps
+        seed: Random seed for reproducibility
+    
+    Returns:
+        Dictionary with simulation results
+    """
+    env = MultiAgentEVChargingGridEnv()
+    obs, info = env.reset(seed=seed)
+    
+    total_reward = 0.0
+    rewards = []
+    
+    for step in range(steps):
+        # Simple action policy
+        action = {
+            "coordinator_action": {
+                "price_deltas": [1] * env.num_stations,
+                "emergency_target_station": 0,
+            },
+            "station_actions": [0] * env.num_stations,
+        }
+        
+        obs, reward, terminated, truncated, info = env.step(action)
+        total_reward += reward
+        rewards.append(float(reward))
+        
+        if terminated or truncated:
+            break
+    
+    return {
+        "status": "success",
+        "simulation": {
+            "total_reward": float(total_reward),
+            "steps": len(rewards),
+            "rewards": rewards,
+        },
+        "metrics": {
+            "mean_reward": float(total_reward) / len(rewards) if rewards else 0.0,
+            "max_reward": float(max(rewards)) if rewards else 0.0,
+            "min_reward": float(min(rewards)) if rewards else 0.0,
+        }
+    }
+
+
 def run():
     """Main inference entry point - EXACT BRACKETED LOG FORMAT."""
     print("[START]")

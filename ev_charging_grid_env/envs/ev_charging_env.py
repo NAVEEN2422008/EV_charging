@@ -44,12 +44,17 @@ class MultiAgentEVChargingGridEnv(gym.Env[dict[str, Any], dict[str, Any]]):
         super().reset(seed=seed)
         if seed is not None:
             self.np_random = np.random.default_rng(seed)
+            # Explicitly seed action space for deterministic sampling
+            self.action_space.seed(seed)
         if options:
             self.config = {**self.config, **options}
             self.task = generate_task(self.config)
             self.num_stations = len(self.task.station_configs)
             self.observation_space = build_observation_space(self.num_stations)
             self.action_space = build_action_space(self.num_stations)
+            # Re-seed action space after recreation
+            if seed is not None:
+                self.action_space.seed(seed)
         self.episode_state = initialize_episode(self.task)
         self.episode_state.weather = sample_weather(self.task, self.np_random)
         self.last_arrivals = []

@@ -11,7 +11,7 @@ def check_file_exists(filepath: str, description: str) -> tuple[bool, str]:
     """Check if a required file exists."""
     path = Path(filepath)
     if path.exists():
-        return True, f"✓ {description}: {filepath}"
+        return True, f"[OK] {description}: {filepath}"
     return False, f"✗ {description}: {filepath} NOT FOUND"
 
 
@@ -19,7 +19,7 @@ def check_module_importable(module_name: str, description: str) -> tuple[bool, s
     """Check if a module can be imported."""
     try:
         __import__(module_name)
-        return True, f"✓ {description}: {module_name} imports successfully"
+        return True, f"[OK] {description}: {module_name} imports successfully"
     except ImportError as e:
         return False, f"✗ {description}: {module_name} failed - {e}"
 
@@ -53,7 +53,7 @@ def check_grader_functions() -> tuple[bool, str]:
             if not (0.0 <= score <= 1.0):
                 return False, f"✗ Grader {task} returned invalid score: {score}"
         
-        return True, f"✓ All graders functional: easy={easy:.3f}, medium={medium:.3f}, hard={hard:.3f}"
+        return True, f"[OK] All graders functional: easy={easy:.3f}, medium={medium:.3f}, hard={hard:.3f}"
     except Exception as e:
         return False, f"✗ Grader functions failed: {e}"
 
@@ -83,7 +83,7 @@ def check_environment_api() -> tuple[bool, str]:
         if obs is None or not isinstance(reward, (int, float)):
             return False, f"✗ Environment.step() returned invalid values"
         
-        return True, "✓ Environment implements full Gym API (reset, step, action/observation spaces)"
+        return True, "[OK] Environment implements full Gym API (reset, step, action/observation spaces)"
     except Exception as e:
         return False, f"✗ Environment API check failed: {e}"
 
@@ -105,7 +105,7 @@ def check_openenv_spec() -> tuple[bool, str]:
         if not all(k in tasks for k in ["easy", "medium", "hard"]):
             return False, "✗ openenv.yaml missing required tasks (easy/medium/hard)"
         
-        return True, "✓ openenv.yaml is valid with all required fields and 3 tasks"
+        return True, "[OK] openenv.yaml is valid with all required fields and 3 tasks"
     except Exception as e:
         return False, f"✗ openenv.yaml validation failed: {e}"
 
@@ -136,7 +136,7 @@ def check_inference_compliance() -> tuple[bool, str]:
             if pattern not in content:
                 return False, f"✗ inference.py missing: {description} ({pattern})"
         
-        return True, "✓ inference.py has all required compliance elements (bracketed logs, env vars, LLM)"
+        return True, "[OK] inference.py has all required compliance elements (bracketed logs, env vars, LLM)"
     except Exception as e:
         return False, f"✗ inference.py check failed: {e}"
 
@@ -158,7 +158,7 @@ def check_dockerization() -> tuple[bool, str]:
             if "address" not in streamlit_config or "enableCORS" not in streamlit_config:
                 return False, "✗ Streamlit config missing required settings"
         
-        return True, "✓ Dockerfile configured for HF Spaces deployment (port 7860, 0.0.0.0)"
+        return True, "[OK] Dockerfile configured for HF Spaces deployment (port 7860, 0.0.0.0)"
     except Exception as e:
         return False, f"✗ Docker check failed: {e}"
 
@@ -232,7 +232,7 @@ def run_validation() -> bool:
     # Summary
     print("\n" + "="*70)
     if all_passed:
-        print("✓ ALL CHECKS PASSED - READY FOR ROUND-1 SUBMISSION")
+        print("[OK] ALL CHECKS PASSED - READY FOR ROUND-1 SUBMISSION")
         print("="*70)
         print("\nREMAINING MANUAL STEPS (for HF Spaces):")
         print("  1. Make Hugging Face Space PUBLIC")
