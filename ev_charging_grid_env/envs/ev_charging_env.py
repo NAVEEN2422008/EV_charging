@@ -40,6 +40,24 @@ class MultiAgentEVChargingGridEnv(gym.Env[dict[str, Any], dict[str, Any]]):
         self.observation_space = build_observation_space(self.num_stations)
         self.action_space = build_action_space(self.num_stations)
 
+    @property
+    def task_id(self) -> str:
+        return self.task.scenario_name
+
+    @property
+    def current_step(self) -> int:
+        return int(self.episode_state.time_step)
+
+    def state(self) -> dict[str, Any]:
+        return self._build_observation()
+
+    def _metrics_snapshot(self) -> dict[str, Any]:
+        return {
+            "task_id": self.task.scenario_name,
+            "current_step": int(self.episode_state.time_step),
+            "vehicles_served": float(self.episode_stats.get("vehicles_seen", 0.0)),
+        }
+
     def reset(self, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
         super().reset(seed=seed)
         if seed is not None:

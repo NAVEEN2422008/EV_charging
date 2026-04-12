@@ -2,8 +2,26 @@
 
 from __future__ import annotations
 
+from typing import Any, Dict, List
+
 from gymnasium import spaces
 import numpy as np
+from pydantic import BaseModel
+
+
+class Observation(BaseModel):
+    """Pydantic model for environment observation."""
+    station_features: List[List[float]]
+    arrivals_summary: List[float]
+    time_context: List[float]
+    weather: int
+    queue_lengths: List[int]
+
+
+class Action(BaseModel):
+    """Pydantic model for environment action."""
+    coordinator_action: Dict[str, Any]
+    station_actions: List[int]
 
 
 def build_observation_space(num_stations: int, max_queue_observed: int = 200) -> spaces.Dict:

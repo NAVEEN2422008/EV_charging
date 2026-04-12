@@ -18,6 +18,7 @@ from ev_charging_grid_env.envs.ev_charging_env import MultiAgentEVChargingGridEn
 
 app = Flask(__name__)
 CORS(app)
+app.url_map.strict_slashes = False
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

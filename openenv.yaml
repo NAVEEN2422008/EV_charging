@@ -13,14 +13,44 @@ tasks:
   easy:
     description: Basic charging grid simulation with fixed heuristic policies
     difficulty: 1
-    
+    config:
+      num_stations: 2
+      base_arrival_rate: 4.0
+      emergency_arrival_prob: 0.02
+      episode_length: 120
+      weather_probs:
+        sunny: 0.7
+        cloudy: 0.2
+        rainy: 0.1
+      station_outage_probability: 0.002
+
   medium:
     description: Optimize vehicle queue management with dynamic pricing
     difficulty: 2
-    
+    config:
+      num_stations: 4
+      base_arrival_rate: 6.0
+      emergency_arrival_prob: 0.05
+      episode_length: 180
+      weather_probs:
+        sunny: 0.5
+        cloudy: 0.3
+        rainy: 0.2
+      station_outage_probability: 0.007
+
   hard:
     description: Maximize solar utilization + emergency response + grid stability
     difficulty: 3
+    config:
+      num_stations: 6
+      base_arrival_rate: 8.0
+      emergency_arrival_prob: 0.08
+      episode_length: 240
+      weather_probs:
+        sunny: 0.4
+        cloudy: 0.3
+        rainy: 0.3
+      station_outage_probability: 0.012
 
 # Grading / evaluation configuration
 grader:
