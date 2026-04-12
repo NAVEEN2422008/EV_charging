@@ -45,10 +45,16 @@ def run_experiment(
     cfg = load_yaml(config_path)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Flat config: use the whole cfg as env config and rely on dataclass defaults
-    # for training hyperparams.  Nested config: use sub-sections.
+    # Flat config: use the whole cfg as env config and allow top-level
+    # training hyperparameters to be filtered for the trainer.
+    # Nested config: use env and training sub-sections.
     env_cfg: dict = cfg.get("env", cfg)
-    train_cfg: dict = cfg.get("training", {})
+    if "training" in cfg:
+        train_cfg: dict = cfg["training"]
+    elif "env" in cfg:
+        train_cfg = {}
+    else:
+        train_cfg = cfg
 
     all_results: list[dict] = []
 

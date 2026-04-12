@@ -8,13 +8,17 @@ Tests cover:
 - Edge cases
 """
 
-import json
+import sys
 import os
+import json
 from io import StringIO
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+# Ensure root directory is in sys.path for importing inference.py
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from ev_charging_grid_env.envs.ev_charging_env import MultiAgentEVChargingGridEnv
 
@@ -191,19 +195,19 @@ def test_inference_json_output():
 def test_llm_client_setup_requires_env_vars():
     """Test LLM client setup fails without environment variables."""
     try:
-        from inference import setup_llm_client
+        from inference import get_llm_client
         
         # Remove env vars if present
-        old_base = os.environ.pop("API_BASE_URL", None)
+        old_hf = os.environ.pop("HF_TOKEN", None)
         old_key = os.environ.pop("API_KEY", None)
         
         try:
-            with pytest.raises(ValueError, match="API_BASE_URL"):
-                setup_llm_client()
+            with pytest.raises(ValueError, match="HF_TOKEN or API_KEY"):
+                get_llm_client()
         finally:
             # Restore
-            if old_base:
-                os.environ["API_BASE_URL"] = old_base
+            if old_hf:
+                os.environ["HF_TOKEN"] = old_hf
             if old_key:
                 os.environ["API_KEY"] = old_key
                 
@@ -211,32 +215,34 @@ def test_llm_client_setup_requires_env_vars():
         pytest.skip("Inference module not available")
 
 
-@patch('inference.OpenAI')
-def test_llm_client_uses_proxy_url(mock_openai_class):
+def test_llm_client_uses_proxy_url():
     """Test LLM client uses proxy base_url from env."""
     try:
-        from inference import setup_llm_client
+        from inference import get_llm_client
         
         # Set env vars
         os.environ["API_BASE_URL"] = "https://proxy.example.com/v1"
         os.environ["API_KEY"] = "test-key-123"
+        os.environ["HF_TOKEN"] = "test-token" # Ensure we have a token
         
         try:
-            setup_llm_client()
-            
-            # Check OpenAI was called with proxy URL
-            mock_openai_class.assert_called_once()
-            call_kwargs = mock_openai_class.call_args.kwargs
-            assert call_kwargs["base_url"] == "https://proxy.example.com/v1"
-            assert call_kwargs["api_key"] == "test-key-123"
+            with patch('inference.OpenAI') as mock_openai_class:
+                get_llm_client()
+                
+                # Check OpenAI was called with proxy URL
+                mock_openai_class.assert_called_once()
+                call_kwargs = mock_openai_class.call_args.kwargs
+                assert call_kwargs["base_url"] == "https://proxy.example.com/v1"
+                assert call_kwargs["api_key"] == "test-token" # HF_TOKEN takes precedence
             
         finally:
             # Clean up
             os.environ.pop("API_BASE_URL", None)
             os.environ.pop("API_KEY", None)
+            os.environ.pop("HF_TOKEN", None)
             
-    except ImportError:
-        pytest.skip("Inference module not available")
+    except ImportError as e:
+        pytest.skip(f"Inference module not available: {e}")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

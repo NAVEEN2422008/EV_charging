@@ -32,9 +32,10 @@ RANDOM_SEED = int(os.getenv("RANDOM_SEED", "42"))
 
 def get_llm_client() -> OpenAI:
     api_key = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+    api_base = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
     if not api_key:
         raise ValueError("HF_TOKEN or API_KEY environment variable must be set")
-    return OpenAI(base_url=API_BASE_URL, api_key=api_key)
+    return OpenAI(base_url=api_base, api_key=api_key)
 
 
 try:

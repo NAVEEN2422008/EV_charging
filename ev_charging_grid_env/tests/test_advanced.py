@@ -171,13 +171,19 @@ class TestExperimentRunnerConfig:
             "num_stations": 3,
             "episode_length": 5,
             "base_arrival_rate": 4.0,
+            # Keep the experiment short for CI/test runtime
+            "total_steps": 64,
+            "rollout_steps": 16,
+            "batch_size": 16,
+            "epochs": 1,
+            "lr": 1e-3,
         }
         with tempfile.TemporaryDirectory() as tmpdir:
             cfg_path = Path(tmpdir) / "config.yaml"
             cfg_path.write_text(yaml.dump(flat_cfg), encoding="utf-8")
             out_dir = Path(tmpdir) / "runs"
 
-            # Should not raise even though config has no "env:" or "training:" keys
+            # Should not raise even though config is flat rather than nested
             run_experiment(cfg_path, "ppo", [42], out_dir)
 
             summary = out_dir / "ppo_summary.json"
