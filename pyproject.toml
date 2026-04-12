@@ -12,6 +12,7 @@ dependencies = [
   "gymnasium",
   "pettingzoo",
   "numpy",
+  "pydantic",
   "matplotlib",
   "pyyaml",
   "torch",
@@ -19,6 +20,10 @@ dependencies = [
   "streamlit",
   "plotly",
   "pandas",
+  "flask",
+  "flask-cors",
+  "openai",
+  "requests",
 ]
 
 [tool.setuptools.packages.find]
