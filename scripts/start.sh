@@ -8,6 +8,6 @@ if [ "$MODE" = "dashboard" ]; then
     --server.address 0.0.0.0 \
     --server.port "${PORT:-8501}"
 else
-  python api/server.py
+  python api_server.py
 fi
 
