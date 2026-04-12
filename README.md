@@ -1,3 +1,13 @@
+---
+title: EV Charging Grid Optimizer
+emoji: ⚡
+colorFrom: purple
+colorTo: blue
+sdk: docker
+app_file: api/server.py
+pinned: false
+---
+
 # Multi-Agent EV Charging Grid Optimizer
 
 [![OpenEnv](https://img.shields.io/badge/OpenEnv-Compliant-brightgreen)](https://github.com/openrlbenchmark/openenv)
