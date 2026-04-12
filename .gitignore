@@ -2,3 +2,7 @@ runs/
 *.pt
 __pycache__/
 *.egg-info/
+
+# Development and test files folder
+temp/
+
