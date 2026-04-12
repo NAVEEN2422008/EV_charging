@@ -8,9 +8,21 @@ from typing import Any
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from pydantic import BaseModel, Field, ValidationError
 import numpy as np
 
 from ev_charging_grid_env.envs.ev_charging_env import MultiAgentEVChargingGridEnv
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MODELS
+# ──────────────────────────────────────────────────────────────────────────────
+
+class ResetRequest(BaseModel):
+    seed: int | None = None
+    config: dict[str, Any] = Field(default_factory=dict)
+
+class StepRequest(BaseModel):
+    action: dict[str, Any]
 
 # ──────────────────────────────────────────────────────────────────────────────
 # FLASK APP SETUP
@@ -86,10 +98,14 @@ def reset() -> tuple[dict, int]:
             "success": True
         }), 200
     try:
-        # Use force=True to ignore Content-Type header (fixes 415 error)
-        data = request.get_json(force=True, silent=True) or {}
-        seed = data.get("seed", None)
-        config = data.get("config", {})
+        raw_data = request.get_json(force=True, silent=True) or {}
+        try:
+            req = ResetRequest(**raw_data)
+        except ValidationError as ve:
+            return jsonify({"error": ve.errors(), "success": False}), 400
+            
+        seed = req.seed
+        config = req.config
         
         logger.info(f"Reset request: seed={seed}")
         
@@ -127,12 +143,16 @@ def step() -> tuple[dict, int]:
             "success": True
         }), 200
     try:
-        # Use force=True to ignore Content-Type header (fixes 415 error)
-        data = request.get_json(force=True, silent=True)
-        if data is None or "action" not in data:
-            return jsonify({"error": "Missing action", "success": False}), 400
-        
-        action = data.get("action")
+        raw_data = request.get_json(force=True, silent=True)
+        if raw_data is None:
+             return jsonify({"error": "Missing JSON body", "success": False}), 400
+             
+        try:
+            req = StepRequest(**raw_data)
+        except ValidationError as ve:
+            return jsonify({"error": ve.errors(), "success": False}), 400
+
+        action = req.action
         env = get_env()
         obs, reward, terminated, truncated, info = env.step(action)
         

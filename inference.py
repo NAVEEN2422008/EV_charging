@@ -22,6 +22,7 @@ from ev_charging_grid_env.envs.ev_charging_env import MultiAgentEVChargingGridEn
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN = os.getenv("HF_TOKEN")
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 SIMULATION_STEPS = int(os.getenv("SIMULATION_STEPS", "30"))
 RANDOM_SEED = int(os.getenv("RANDOM_SEED", "42"))
 
@@ -84,7 +85,7 @@ def run() -> Dict[str, Any]:
     task = "baseline"
     env_name = "ev-charging-grid-env"
 
-    print(f"[START] task={task} env={env_name} model={MODEL_NAME} seed={RANDOM_SEED}")
+    print(f"[START] task={task} env={env_name} model={MODEL_NAME}", flush=True)
 
     env = create_environment()
     env.reset(seed=RANDOM_SEED)
@@ -100,7 +101,7 @@ def run() -> Dict[str, Any]:
         done = terminated or truncated
         action_str = json.dumps(action, separators=(",", ":"))
 
-        print(f"[STEP] step={step} action=\"{action_str}\" reward={reward:.4f} done={done} error=None")
+        print(f"[STEP] step={step} action=\"{action_str}\" reward={reward:.4f} done={done} error=None", flush=True)
 
         steps_executed += 1
         if done:
@@ -109,7 +110,7 @@ def run() -> Dict[str, Any]:
     score = max(0.0, min(1.0, 0.5 + total_reward / 100.0)) if steps_executed > 0 else 0.0
     rewards_str = json.dumps(episode_rewards)
 
-    print(f"[END] success=true steps={steps_executed} score={score:.4f} rewards={rewards_str}")
+    print(f"[END] success=True steps={steps_executed} score={score:.4f} rewards={rewards_str}", flush=True)
 
     summary = call_llm(
         f"Total reward: {total_reward:.2f}. Steps: {steps_executed}. Explain system performance."
