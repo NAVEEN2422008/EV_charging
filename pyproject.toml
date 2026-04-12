@@ -24,7 +24,11 @@ dependencies = [
   "flask-cors",
   "openai",
   "requests",
+  "openenv-core",
 ]
 
+[project.scripts]
+server = "server.app:main"
+
 [tool.setuptools.packages.find]
-include = ["ev_charging_grid_env*"]
+include = ["ev_charging_grid_env*", "server*"]

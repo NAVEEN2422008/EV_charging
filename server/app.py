@@ -288,15 +288,15 @@ def internal_error(error: Any) -> tuple[dict, int]:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-if __name__ == "__main__":
+def main() -> None:
     import argparse
-    
     parser = argparse.ArgumentParser(description="OpenEnv API Server")
     parser.add_argument("--host", default="0.0.0.0", help="Server host")
     parser.add_argument("--port", type=int, default=5000, help="Server port")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
-    
     args = parser.parse_args()
-    
     logger.info(f"Starting server on {args.host}:{args.port}")
     app.run(host=args.host, port=args.port, debug=args.debug)
+
+if __name__ == "__main__":
+    main()

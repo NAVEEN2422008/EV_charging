@@ -9,9 +9,9 @@ service nginx start || nginx -g "daemon off;" &
 NGINX_PID=$!
 sleep 2
 
-# Start API server in background on port 5000
-echo "Starting API server on port 5000..."
-python /app/api_server.py --host 0.0.0.0 --port 5000 > /tmp/api_server.log 2>&1 &
+# Start API server using the project script entry point
+echo "Starting API server via 'server' script..."
+server --host 0.0.0.0 --port 5000 > /tmp/api_server.log 2>&1 &
 API_PID=$!
 echo "API server PID: $API_PID"
 
