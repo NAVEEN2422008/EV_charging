@@ -13,6 +13,9 @@ tasks:
   easy:
     description: Basic charging grid simulation with fixed heuristic policies
     difficulty: 1
+    grader:
+      type: custom
+      entrypoint: ev_charging_grid_env.graders.task_graders:grade_easy_task
     config:
       num_stations: 2
       base_arrival_rate: 4.0
@@ -27,6 +30,9 @@ tasks:
   medium:
     description: Optimize vehicle queue management with dynamic pricing
     difficulty: 2
+    grader:
+      type: custom
+      entrypoint: ev_charging_grid_env.graders.task_graders:grade_medium_task
     config:
       num_stations: 4
       base_arrival_rate: 6.0
@@ -41,6 +47,9 @@ tasks:
   hard:
     description: Maximize solar utilization + emergency response + grid stability
     difficulty: 3
+    grader:
+      type: custom
+      entrypoint: ev_charging_grid_env.graders.task_graders:grade_hard_task
     config:
       num_stations: 6
       base_arrival_rate: 8.0
@@ -52,17 +61,13 @@ tasks:
         rainy: 0.3
       station_outage_probability: 0.012
 
-# Grading / evaluation configuration
-grader:
-  type: reward
-  # Environment is valid if reward doesn't crash/NaN
-  threshold: 0.0
-  metrics:
-    - total_reward
-    - average_wait_time
-    - solar_utilization_pct
-    - emergency_served
-    - grid_overload_events
+# Global metrics available for all graders
+metrics:
+  - total_reward
+  - average_wait_time
+  - solar_utilization_pct
+  - emergency_served
+  - grid_overload_events
 
 # Environment configuration
 config:
