@@ -77,9 +77,14 @@ def health() -> tuple[dict, int]:
     return jsonify({"status": "healthy", "service": "ev-charging-grid-env"}), 200
 
 
-@app.route("/reset", methods=["POST"])
+@app.route("/reset", methods=["GET", "POST"])
 def reset() -> tuple[dict, int]:
     """Reset environment endpoint (OpenEnv compatible)."""
+    if request.method == "GET":
+        return jsonify({
+            "message": "Reset endpoint. Use POST to reset the environment.",
+            "success": True
+        }), 200
     try:
         data = request.get_json() or {}
         seed = data.get("seed", None)
@@ -112,9 +117,14 @@ def reset() -> tuple[dict, int]:
         }), 400
 
 
-@app.route("/step", methods=["POST"])
+@app.route("/step", methods=["GET", "POST"])
 def step() -> tuple[dict, int]:
     """Step environment endpoint (OpenEnv compatible)."""
+    if request.method == "GET":
+        return jsonify({
+            "message": "Step endpoint. Use POST to execute a step.",
+            "success": True
+        }), 200
     try:
         data = request.get_json()
         if not data or "action" not in data:

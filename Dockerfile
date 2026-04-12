@@ -28,8 +28,8 @@ RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 # Make startup script executable
 RUN chmod +x /app/scripts/start.sh
 
-# Expose ports: 80 for nginx, 5000 for API (internal), 8501 for Streamlit (internal)
-EXPOSE 80 5000 8501
+# Expose ports: 7860 for nginx, 5000 for API (internal), 8501 for Streamlit (internal)
+EXPOSE 7860 5000 8501
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
