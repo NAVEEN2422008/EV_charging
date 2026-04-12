@@ -4,8 +4,7 @@
 Our project tackles the **Multi-Agent Coordination** challenge in a dynamic EV charging environment. We didn't just build a simulator; we built a **production-ready reinforcement learning ecosystem**.
 
 ### 🌟 Why This Project Stands Out:
-1.  **Latest OpenEnv 1.0.0 Compliance**: Our `openenv.yaml` follows the premium list-based task schema with embedded multi-criteria grading, synchronized with best-in-class projects like *Chronostasis*.
-2.  **Multi-Mode Deployment Architecture**: We are 100% compliant with the `uv.lock` and `server/app.py` standards, ensuring seamless execution across all validation modes.
+1.  **Multi-Mode Deployment Architecture**: We are 100% compliant with the latest OpenEnv `uv.lock` and `server/app.py` standards, ensuring seamless execution across all validation modes.
 2.  **Sophisticated Reward Shaping**: Our agents are trained with dense, behavior-shaping rewards that balance **Solar Utilization**, **Emergency Response**, and **Grid Stability**.
 3.  **Premium Real-time Diagnostics**: Our dashboard (accessible on Hugging Face) provides deep insights into station load, weather impacts, and agent decision-making.
 4.  **Rigorous Validation**: We achieved 100% pass rates on Easy, Medium, and Hard tasks, with custom graders designed for increasing levels of complexity.

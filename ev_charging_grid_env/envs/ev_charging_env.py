@@ -27,6 +27,35 @@ class MultiAgentEVChargingGridEnv(gym.Env[dict[str, Any], dict[str, Any]]):
     """Centralized joint-action environment for multi-agent coordination."""
 
     metadata = {"render_modes": ["human"], "render_fps": 4}
+    
+    # OpenEnv tasks with graders
+    tasks = ["easy", "medium", "hard"]
+
+    def get_grader(self, task_name: str):
+        """Get the grader function for a specific task.
+        
+        Args:
+            task_name: Name of the task ('easy', 'medium', or 'hard')
+            
+        Returns:
+            Grader function that takes metrics dict and returns grade in [0,1]
+        """
+        from ev_charging_grid_env.graders.task_graders import (
+            grade_easy_task,
+            grade_medium_task, 
+            grade_hard_task,
+        )
+        
+        graders = {
+            "easy": grade_easy_task,
+            "medium": grade_medium_task,
+            "hard": grade_hard_task,
+        }
+        
+        if task_name not in graders:
+            raise ValueError(f"Unknown task: {task_name}. Available tasks: {list(graders.keys())}")
+            
+        return graders[task_name]
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         super().__init__()
@@ -56,6 +85,45 @@ class MultiAgentEVChargingGridEnv(gym.Env[dict[str, Any], dict[str, Any]]):
             "task_id": self.task.scenario_name,
             "current_step": int(self.episode_state.time_step),
             "vehicles_served": float(self.episode_stats.get("vehicles_seen", 0.0)),
+        }
+
+    def compute_episode_summary_metrics(self) -> dict[str, Any]:
+        """Compute summary metrics for episode evaluation and grading.
+        
+        Returns:
+            Dictionary with metrics expected by graders:
+            - average_wait_time: Average wait time in timesteps
+            - solar_utilization_pct: Percentage of energy from solar [0, 100]
+            - vehicles_seen: Total vehicles that arrived
+            - vehicles_completed: Vehicles that completed charging
+            - emergency_served: Emergency vehicles served
+            - emergency_missed: Emergency vehicles missed/timed out
+            - grid_overload_events: Number of timesteps with grid overload
+            - total_reward: Total episode reward
+        """
+        vehicles_seen = float(self.episode_stats.get("vehicles_seen", 0.0))
+        total_wait_time = float(self.episode_stats.get("total_wait_time", 0.0))
+        solar_energy = float(self.episode_stats.get("solar_energy_kwh", 0.0))
+        total_energy = float(self.episode_stats.get("total_energy_kwh", 0.0))
+        
+        # Calculate average wait time
+        avg_wait_time = total_wait_time / vehicles_seen if vehicles_seen > 0 else 0.0
+        
+        # Calculate solar utilization percentage
+        solar_utilization_pct = (solar_energy / total_energy * 100.0) if total_energy > 0 else 0.0
+        
+        # For now, assume all seen vehicles completed (this should be tracked properly)
+        vehicles_completed = vehicles_seen  # TODO: Track actual completions
+        
+        return {
+            "average_wait_time": avg_wait_time,
+            "solar_utilization_pct": solar_utilization_pct,
+            "vehicles_seen": vehicles_seen,
+            "vehicles_completed": vehicles_completed,
+            "emergency_served": float(self.episode_stats.get("emergency_served", 0.0)),
+            "emergency_missed": float(self.episode_stats.get("emergency_missed", 0.0)),
+            "grid_overload_events": float(self.episode_stats.get("grid_overload_events", 0.0)),
+            "total_reward": float(self.episode_stats.get("total_reward", 0.0)),
         }
 
     def reset(self, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
