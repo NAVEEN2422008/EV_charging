@@ -113,6 +113,8 @@ def env_step(action: dict) -> dict:
 # ──────────────────────────────────────────────────────────
 # LLM COORDINATOR AGENT
 
+import re
+
 def get_llm_action(client: OpenAI, num_stations: int, obs: dict, step: int) -> dict:
     """Use LLM to decide coordinator actions (pricing and emergency routing)."""
     try:
@@ -137,10 +139,17 @@ def get_llm_action(client: OpenAI, num_stations: int, obs: dict, step: int) -> d
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
-            timeout=10
+            timeout=30
         )
-        data = json.loads(response.choices[0].message.content)
+        content = response.choices[0].message.content
+        
+        # Try to find JSON if markdown formatted
+        if "```json" in content:
+            content = content.split("```json")[-1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[-1].split("```")[0].strip()
+            
+        data = json.loads(content)
         
         # Validate and sanitize response
         price_deltas = data.get("price_deltas", [0] * num_stations)
@@ -157,6 +166,7 @@ def get_llm_action(client: OpenAI, num_stations: int, obs: dict, step: int) -> d
             "station_actions": [1] * num_stations,
         }
     except Exception as e:
+        print(f"[DEBUG] LLM call failed: {e}", flush=True)
         # Fallback to heuristic if LLM fails
         return build_heuristic_action(num_stations, step)
 
