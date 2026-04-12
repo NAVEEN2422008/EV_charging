@@ -340,6 +340,7 @@ class TestTrainingDiagnostics:
 
     def test_stability_metrics(self):
         """Test training stability assessment."""
+        np.random.seed(42)
         diag = TrainingDiagnostics(window_size=5)
 
         # Add stable metrics
@@ -368,6 +369,7 @@ class TestTrainingDiagnostics:
 
     def test_convergence_status(self):
         """Test convergence detection."""
+        np.random.seed(42)
         diag = TrainingDiagnostics(window_size=5)
 
         # Add improving then plateauing metrics
