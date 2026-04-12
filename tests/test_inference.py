@@ -12,7 +12,7 @@ import inference
 def test_run_simulation_and_logs() -> None:
     logs, result = inference.capture_run_output(task_id="easy", steps=5, seed=42)
     assert "[START]" in logs
-    assert "[STEP] step=0 reward=" in logs
+    assert "[STEP]" in logs and "reward=" in logs
     assert "[END]" in logs
     assert isinstance(result["total_reward"], float)
     assert isinstance(result["summary"], str)

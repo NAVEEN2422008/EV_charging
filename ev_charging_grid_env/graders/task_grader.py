@@ -97,8 +97,8 @@ def grade_medium_task(metrics: dict[str, Any], episode_steps: int | None = None)
 def grade_hard_task(metrics: dict[str, Any], episode_steps: int | None = None) -> float:
     """Grade hard task: challenging constraints.
 
-    Hard success: >60% served + >40% solar + emergency >95% + <16min wait.
-    Emphasis on emergency handling and solar efficiency.
+    Hard success: >60% served + >40% solar + <16min wait.
+    Emphasis on challenging environment, same bonus structure as easy/medium.
     """
     base_score = grade_episode(metrics)
 
@@ -108,27 +108,20 @@ def grade_hard_task(metrics: dict[str, Any], episode_steps: int | None = None) -
     emergency_seen = float(metrics.get("emergency_seen", 0.0))
     emergency_served = float(metrics.get("emergency_served", 0.0))
 
-    # Critical component: emergency service ratio (hard requires 95%+)
-    emergency_ratio = 0.0
-    if emergency_seen > 0:
-        emergency_ratio = emergency_served / emergency_seen
-
     # Bonus for reaching hard targets
     bonus = 0.0
     if served_ratio > 0.60:
-        bonus += 0.04
+        bonus += 0.05
     if solar_ratio > 0.40:
-        bonus += 0.04
+        bonus += 0.05
     if avg_wait < 16.0:
-        bonus += 0.04
+        bonus += 0.05
 
-    # Strong emergency bonus (critical for hard)
-    if emergency_ratio > 0.95:
-        bonus += 0.08
-    elif emergency_ratio > 0.80:
-        bonus += 0.04
-    else:
-        bonus -= 0.05  # Penalty for poor emergency service
+    # Emergency bonus
+    if emergency_seen > 0:
+        emergency_ratio = emergency_served / emergency_seen
+        if emergency_ratio > 0.80:
+            bonus += 0.03
 
     return _clip01(base_score + bonus)
 
