@@ -46,6 +46,7 @@ def get_env() -> MultiAgentEVChargingGridEnv:
 
 
 @app.get("/", response_class=HTMLResponse)
+@app.post("/", response_class=HTMLResponse)
 def root() -> str:
     state = get_env().state()
     metrics = get_env()._metrics_snapshot()
@@ -59,19 +60,22 @@ def root() -> str:
 
 
 @app.get("/health")
+@app.post("/health")
 def health() -> dict[str, Any]:
     env = get_env()
     return {"status": "ok", "task_id": env.task_id, "step": env.current_step}
 
 
 @app.post("/reset")
-def reset(request: ResetRequest) -> dict[str, Any]:
+@app.post("/reset/")
+def reset(request: ResetRequest | None = None) -> dict[str, Any]:
     global _ENV
-    config = dict(request.config)
-    if request.task_id:
-        config["task_id"] = request.task_id
+    req = request or ResetRequest()
+    config = dict(req.config)
+    if req.task_id:
+        config["task_id"] = req.task_id
     _ENV = MultiAgentEVChargingGridEnv(config=config)
-    observation, info = _ENV.reset(seed=request.seed, options=config)
+    observation, info = _ENV.reset(seed=req.seed, options=config)
     return {
         "observation": _to_jsonable(observation),
         "info": _to_jsonable(info),
@@ -80,6 +84,7 @@ def reset(request: ResetRequest) -> dict[str, Any]:
 
 
 @app.post("/step")
+@app.post("/step/")
 def step(request: StepRequest) -> dict[str, Any]:
     observation, reward, terminated, truncated, info = get_env().step(request.action)
     return {
