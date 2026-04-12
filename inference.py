@@ -29,7 +29,7 @@ HF_TOKEN         = os.getenv("HF_TOKEN")
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 
 # Environment-specific config
-ENV_BASE_URL  = os.getenv("ENV_BASE_URL", "http://localhost:5000")
+ENV_BASE_URL  = os.getenv("ENV_BASE_URL", "https://naveenkumar24022008-ev.hf.space")
 BENCHMARK     = os.getenv("EV_BENCH", "ev-charging-grid-env")
 RANDOM_SEED   = int(os.getenv("RANDOM_SEED", "42"))
 
