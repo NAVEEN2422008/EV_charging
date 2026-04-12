@@ -3,6 +3,12 @@ set -e
 
 echo "Starting EV Charging Grid Environment services..."
 
+# Start nginx in background
+echo "Starting nginx reverse proxy..."
+service nginx start || nginx -g "daemon off;" &
+NGINX_PID=$!
+sleep 2
+
 # Start API server in background on port 5000
 echo "Starting API server on port 5000..."
 python /app/api_server.py --host 0.0.0.0 --port 5000 > /tmp/api_server.log 2>&1 &
@@ -33,10 +39,10 @@ if [ $retry -eq $max_retries ]; then
     tail -n 10 /tmp/api_server.log 2>/dev/null || echo "  (check logs)"
 fi
 
-# Start Streamlit app on port 7860 in foreground
-echo "Starting Streamlit app on port 7860..."
+# Start Streamlit app on port 8501 in foreground
+echo "Starting Streamlit app on port 8501..."
 streamlit run /app/app.py \
-    --server.port 7860 \
+    --server.port 8501 \
     --server.address 0.0.0.0 \
     --server.enableXsrfProtection=false \
     --logger.level=info
@@ -45,5 +51,7 @@ streamlit run /app/app.py \
 cleanup() {
     echo "Shutting down services..."
     kill $API_PID 2>/dev/null || true
+    kill $NGINX_PID 2>/dev/null || true
+    service nginx stop 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
