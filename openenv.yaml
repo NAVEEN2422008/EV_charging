@@ -1,103 +1,47 @@
-name: ev-charging-grid-env
-version: 0.1.0
-description: Multi-Agent Reinforcement Learning for adaptive EV charging network optimization
-
-# Environment entry point for OpenEnv validation
+name: ev-charging-grid
+description: Multi-agent EV charging grid optimization with solar usage, queue balancing, and emergency prioritization
 entrypoint: ev_charging_grid_env.envs.ev_charging_env:MultiAgentEVChargingGridEnv
 
-# Gym API specification
-gym_api_version: "0.26"
-
-# Supported tasks
 tasks:
-  easy:
-    description: Basic charging grid simulation with fixed heuristic policies
-    difficulty: 1
-    
-  medium:
-    description: Optimize vehicle queue management with dynamic pricing
-    difficulty: 2
-    
-  hard:
-    description: Maximize solar utilization + emergency response + grid stability
-    difficulty: 3
+  - id: easy
+    description: "Low-arrival scenario with abundant solar and grid capacity. Objective: maximize vehicle throughput while minimizing wait times."
+    objective: "Achieve >85% vehicle service ratio with <8-minute average wait time"
+    episode_length: 96
+    parameters:
+      arrival_lambda: 3.5
+      emergency_probability: 0.01
+      solar_multiplier: 1.15
+      grid_capacity_kw: 1750
+      weather_weights: [0.7, 0.2, 0.1]
 
-# Grading / evaluation configuration
+  - id: medium
+    description: "Moderate-arrival scenario with balanced solar generation and grid constraints. Objective: balance throughput, solar utilization, and wait times."
+    objective: "Achieve >70% vehicle service ratio with >50% solar usage and <12-minute average wait time"
+    episode_length: 120
+    parameters:
+      arrival_lambda: 7.0
+      emergency_probability: 0.05
+      solar_multiplier: 0.85
+      grid_capacity_kw: 1300
+      weather_weights: [0.45, 0.35, 0.2]
+
+  - id: hard
+    description: "High-arrival scenario with limited solar and tight grid constraints. Objective: handle emergency prioritization while optimizing energy balance."
+    objective: "Achieve >60% vehicle service ratio with >40% solar usage, prioritize 95% emergency service, and manage <16-minute average wait time"
+    episode_length: 144
+    parameters:
+      arrival_lambda: 11.0
+      emergency_probability: 0.12
+      solar_multiplier: 0.55
+      grid_capacity_kw: 950
+      weather_weights: [0.25, 0.35, 0.4]
+
 grader:
-  type: reward
-  # Environment is valid if reward doesn't crash/NaN
-  threshold: 0.0
-  metrics:
-    - total_reward
-    - average_wait_time
-    - solar_utilization_pct
-    - emergency_served
-    - grid_overload_events
+  type: deterministic
+  scoring_method: weighted_metrics
+  metric_weights:
+    served_ratio: 0.4
+    solar_usage_ratio: 0.3
+    wait_time_efficiency: 0.3
+  output_range: [0.0, 1.0]
 
-# Environment configuration
-config:
-  # Simulation parameters
-  base_arrival_rate: 6.0           # vehicles per time step
-  emergency_arrival_prob: 0.04     # 4% of arrivals are emergency
-  episode_length: 300              # steps per episode
-  
-  # Station configuration
-  num_stations: 2                  # number of charging stations
-  station_chargers_per_station: 4  # chargers per station
-  
-  # Energy configuration
-  base_solar_capacity_kw: 120.0    # max solar generation
-  grid_limit_kw: 1800.0            # grid power constraint
-  
-  # Vehicle configuration
-  min_battery_needed_kwh: 10.0
-  max_battery_capacity_kwh: 100.0
-  charger_power_kw: 7.0
-
-# API specification
-api:
-  action_type: dict
-  action_spec:
-    coordinator_action:
-      type: dict
-      properties:
-        price_deltas: array(int64)          # per-station price deltas
-        emergency_target_station: int       # preferred station for emergencies
-    station_actions: array(int)             # [0=hold, 1=accept, 2=emergency_first, 3=redirect]
-  
-  observation_type: dict
-  observation_spec:
-    station_features: array(float32)        # [queue_len, charging_count, solar, has_charger] per station
-    queue_lengths: array(int64)             # vehicles waiting at each station
-    time_context: array(float32)            # [time_step, time_of_day]
-    arrivals_summary: array(float32)        # [total_arrivals, emergency_arrivals]
-    weather: int                            # 0=sunny, 1=cloudy, 2=rainy
-
-  reward_type: float
-  terminated_type: bool
-  truncated_type: bool
-  info_type: dict
-
-# Validation requirements
-validation:
-  requires_reset: true
-  requires_step: true
-  requires_gymnasium_api: true
-  timeout_seconds: 300
-
-# Metadata
-metadata:
-  authors:
-    - name: EV Grid Optimizer Team
-      email: dev@ev-grid.io
-  license: MIT
-  tags:
-    - multi-agent
-    - reinforcement-learning
-    - energy-management
-    - transportation
-  keywords:
-    - EV charging
-    - PPO/MAPPO training
-    - real-time optimization
-    - grid stability

@@ -5,21 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ev-charging-grid-env"
 version = "0.1.0"
-description = "Multi-agent EV charging grid optimization environment for RL research."
-readme = "README.md"
+description = "OpenEnv-compliant multi-agent EV charging grid optimizer"
 requires-python = ">=3.11"
-dependencies = [
-  "gymnasium",
-  "pettingzoo",
-  "numpy",
-  "matplotlib",
-  "pyyaml",
-  "torch",
-  "tensorboard",
-  "streamlit",
-  "plotly",
-  "pandas",
-]
 
-[tool.setuptools.packages.find]
-include = ["ev_charging_grid_env*"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+

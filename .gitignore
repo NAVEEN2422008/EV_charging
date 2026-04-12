@@ -1,4 +1,12 @@
-runs/
-*.pt
 __pycache__/
-*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+*.pyc
+.ui.pid
+ui.stdout.log
+ui.stderr.log
+.ui.pid
+ui.stdout.log
+ui.stderr.log

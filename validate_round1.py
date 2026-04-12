@@ -1,252 +1,198 @@
-"""Comprehensive Round-1 compliance validation."""
+"""Comprehensive round-one validator for the EV charging OpenEnv project."""
 
-import sys
+from __future__ import annotations
+
+import importlib
+import json
 from pathlib import Path
 
-# Add project to path
-sys.path.insert(0, str(Path(__file__).parent))
+import yaml
+from fastapi.testclient import TestClient
+
+import inference
+from ev_charging_grid_env.api.server import app
+from ev_charging_grid_env.envs import MultiAgentEVChargingGridEnv
+from ev_charging_grid_env.graders import grade_episode
 
 
-def check_file_exists(filepath: str, description: str) -> tuple[bool, str]:
-    """Check if a required file exists."""
-    path = Path(filepath)
-    if path.exists():
-        return True, f"[OK] {description}: {filepath}"
-    return False, f"✗ {description}: {filepath} NOT FOUND"
+ROOT = Path(__file__).resolve().parent
 
 
-def check_module_importable(module_name: str, description: str) -> tuple[bool, str]:
-    """Check if a module can be imported."""
-    try:
-        __import__(module_name)
-        return True, f"[OK] {description}: {module_name} imports successfully"
-    except ImportError as e:
-        return False, f"✗ {description}: {module_name} failed - {e}"
+def _read(path: str) -> str:
+    return (ROOT / path).read_text(encoding="utf-8")
 
 
-def check_grader_functions() -> tuple[bool, str]:
-    """Check that grader functions work."""
-    try:
-        from ev_charging_grid_env.graders import (
-            grade_easy_task,
-            grade_medium_task,
-            grade_hard_task,
-        )
-        
-        # Test with sample metrics
-        test_metrics = {
-            "average_wait_time": 12.5,
-            "solar_utilization_pct": 45.0,
-            "vehicles_seen": 50.0,
-            "vehicles_completed": 45.0,
-            "emergency_served": 3.0,
-            "emergency_missed": 1.0,
-            "grid_overload_events": 15.0,
-        }
-        
-        easy = grade_easy_task(test_metrics)
-        medium = grade_medium_task(test_metrics)
-        hard = grade_hard_task(test_metrics)
-        
-        # Validate outputs are in [0.0, 1.0]
-        for score, task in [(easy, "easy"), (medium, "medium"), (hard, "hard")]:
-            if not (0.0 <= score <= 1.0):
-                return False, f"✗ Grader {task} returned invalid score: {score}"
-        
-        return True, f"[OK] All graders functional: easy={easy:.3f}, medium={medium:.3f}, hard={hard:.3f}"
-    except Exception as e:
-        return False, f"✗ Grader functions failed: {e}"
-
-
-def check_environment_api() -> tuple[bool, str]:
-    """Check that environment implements proper Gym API."""
-    try:
-        from ev_charging_grid_env.envs import MultiAgentEVChargingGridEnv
-        
-        # Verify class exists and has required methods
-        required_methods = ["reset", "step", "render", "close"]
-        env = MultiAgentEVChargingGridEnv()
-        
-        for method in required_methods:
-            if not hasattr(env, method):
-                return False, f"✗ Environment missing method: {method}"
-        
-        # Test basic reset/step
-        obs, info = env.reset(seed=42)
-        if obs is None:
-            return False, "✗ Environment.reset() returned None observation"
-        
-        # Test step with dummy action
-        dummy_action = env.action_space.sample()
-        obs, reward, terminated, truncated, info = env.step(dummy_action)
-        
-        if obs is None or not isinstance(reward, (int, float)):
-            return False, f"✗ Environment.step() returned invalid values"
-        
-        return True, "[OK] Environment implements full Gym API (reset, step, action/observation spaces)"
-    except Exception as e:
-        return False, f"✗ Environment API check failed: {e}"
-
-
-def check_openenv_spec() -> tuple[bool, str]:
-    """Check that openenv.yaml is valid."""
-    try:
-        import yaml
-        spec = yaml.safe_load(Path("openenv.yaml").read_text())
-        
-        # Check required fields
-        required_fields = ["name", "version", "tasks", "grader", "config", "api"]
-        for field in required_fields:
-            if field not in spec:
-                return False, f"✗ openenv.yaml missing field: {field}"
-        
-        # Check tasks
-        tasks = spec.get("tasks", {})
-        if not all(k in tasks for k in ["easy", "medium", "hard"]):
-            return False, "✗ openenv.yaml missing required tasks (easy/medium/hard)"
-        
-        return True, "[OK] openenv.yaml is valid with all required fields and 3 tasks"
-    except Exception as e:
-        return False, f"✗ openenv.yaml validation failed: {e}"
-
-
-def check_inference_compliance() -> tuple[bool, str]:
-    """Check that inference.py is compliant."""
-    try:
-        import subprocess
-        from pathlib import Path
-        import os
-        
-        # Check file exists
-        if not Path("inference.py").exists():
-            return False, "✗ inference.py not found"
-        
-        # Read file and check for required elements
-        content = Path("inference.py").read_text()
-        
-        required_patterns = [
-            ("[START]", "bracketed start marker"),
-            ("[STEP]", "bracketed step marker"),
-            ("[END]", "bracketed end marker"),
-            ("os.getenv", "environment variable reading"),
-            ("OpenAI", "LLM client initialization"),
-        ]
-        
-        for pattern, description in required_patterns:
-            if pattern not in content:
-                return False, f"✗ inference.py missing: {description} ({pattern})"
-        
-        return True, "[OK] inference.py has all required compliance elements (bracketed logs, env vars, LLM)"
-    except Exception as e:
-        return False, f"✗ inference.py check failed: {e}"
-
-
-def check_dockerization() -> tuple[bool, str]:
-    """Check that Docker is properly configured."""
-    try:
-        dockerfile = Path("Dockerfile").read_text()
-        
-        # Check for required elements
-        if "7860" not in dockerfile:
-            return False, "✗ Dockerfile not using port 7860 (required for HF Spaces)"
-        
-        if "0.0.0.0" not in dockerfile:
-            return False, "✗ Dockerfile not binding to 0.0.0.0 (required for container networking)"
-        
-        if "streamlit" in dockerfile.lower():
-            streamlit_config = Path(".streamlit/config.toml").read_text()
-            if "address" not in streamlit_config or "enableCORS" not in streamlit_config:
-                return False, "✗ Streamlit config missing required settings"
-        
-        return True, "[OK] Dockerfile configured for HF Spaces deployment (port 7860, 0.0.0.0)"
-    except Exception as e:
-        return False, f"✗ Docker check failed: {e}"
-
-
-def run_validation() -> bool:
-    """Run all validation checks and report results."""
-    print("\n" + "="*70)
-    print("OPENENV ROUND-1 COMPLIANCE VALIDATION")
-    print("="*70 + "\n")
-    
-    checks = [
-        ("File Structure", [
-            ("openenv.yaml", "OpenEnv specification"),
-            ("Dockerfile", "Docker configuration"),
-            ("inference.py", "Inference script"),
-            ("api_server.py", "API server"),
-            ("requirements.txt", "Dependencies"),
-        ]),
-        ("Module Imports", [
-            ("ev_charging_grid_env", "Main package"),
-            ("ev_charging_grid_env.envs", "Environment module"),
-            ("ev_charging_grid_env.graders", "Graders module (NEW)"),
-        ]),
-        ("API & Functionality", [
-            (check_environment_api, "Environment API compliance"),
-            (check_grader_functions, "Task grader functions (NEW)"),
-            (check_openenv_spec, "OpenEnv specification validation"),
-            (check_inference_compliance, "Inference script compliance"),
-            (check_dockerization, "Docker/HF Spaces configuration"),
-        ]),
+def validate_structure() -> None:
+    required = [
+        "openenv.yaml",
+        "Dockerfile",
+        "requirements.txt",
+        "inference.py",
+        "api_server.py",
+        "api/server.py",
+        "scripts/start.sh",
+        "ev_charging_grid_env/envs/ev_charging_env.py",
+        "ev_charging_grid_env/api/server.py",
+        "ev_charging_grid_env/graders/task_grader.py",
+        "ev_charging_grid_env/agents/coordinator_agent.py",
+        "ev_charging_grid_env/agents/station_agent.py",
+        "ev_charging_grid_env/ui/dashboard.py",
+        "ev_charging_grid_env/config/tasks.py",
     ]
-    
-    all_passed = True
-    
-    # File existence checks
-    print("FILE STRUCTURE CHECK:")
-    print("-" * 70)
-    for category, files in [(k, v) for k, v in checks[:2] if k == "File Structure"]:
-        for item in files:
-            if isinstance(item, tuple) and len(item) == 2:
-                filepath, desc = item
-                passed, msg = check_file_exists(filepath, desc)
-                print(msg)
-                all_passed = all_passed and passed
-    
-    # Module import checks
-    print("\nMODULE IMPORTS CHECK:")
-    print("-" * 70)
-    for category, modules in [(k, v) for k, v in checks[:2] if k == "Module Imports"]:
-        for item in modules:
-            if isinstance(item, tuple) and len(item) == 2:
-                module, desc = item
-                passed, msg = check_module_importable(module, desc)
-                print(msg)
-                all_passed = all_passed and passed
-    
-    # Function checks
-    print("\nFUNCTIONAL CHECKS:")
-    print("-" * 70)
-    for category, funcs in [(k, v) for k, v in checks if k == "API & Functionality"]:
-        for item in funcs:
-            if callable(item):
-                func = item
-                passed, msg = func()
-            else:
-                func, desc = item
-                passed, msg = func()
-            print(msg)
-            all_passed = all_passed and passed
-    
-    # Summary
-    print("\n" + "="*70)
-    if all_passed:
-        print("[OK] ALL CHECKS PASSED - READY FOR ROUND-1 SUBMISSION")
-        print("="*70)
-        print("\nREMAINING MANUAL STEPS (for HF Spaces):")
-        print("  1. Make Hugging Face Space PUBLIC")
-        print("  2. Add secrets in Space settings:")
-        print("     - HF_TOKEN: Your Hugging Face API token")
-        print("     - API_KEY: For LLM proxy authentication")
-        print("="*70)
-        return True
-    else:
-        print("✗ SOME CHECKS FAILED - FIX ISSUES BEFORE SUBMISSION")
-        print("="*70)
-        return False
+    for relative in required:
+        assert (ROOT / relative).exists(), f"Missing required file: {relative}"
+
+
+def validate_imports() -> None:
+    importlib.import_module("ev_charging_grid_env")
+    importlib.import_module("ev_charging_grid_env.envs")
+    importlib.import_module("ev_charging_grid_env.graders")
+
+
+def validate_openenv_yaml() -> None:
+    spec = yaml.safe_load(_read("openenv.yaml"))
+    assert spec["name"] == "ev-charging-grid"
+    assert spec["entrypoint"] == "ev_charging_grid_env.envs.ev_charging_env:MultiAgentEVChargingGridEnv"
+    assert [task["id"] for task in spec["tasks"]] == ["easy", "medium", "hard"]
+    assert spec["grader"]["type"] == "reward"
+
+
+def validate_environment() -> None:
+    env = MultiAgentEVChargingGridEnv({"task_id": "medium"})
+    assert hasattr(env, "reset")
+    assert hasattr(env, "step")
+    assert hasattr(env, "state")
+    assert hasattr(env, "render")
+    assert hasattr(env, "close")
+
+    obs, info = env.reset(seed=42)
+    assert isinstance(obs, dict)
+    assert isinstance(info, dict)
+    assert "station_features" in obs
+    assert "queue_lengths" in obs
+    assert "time_context" in obs
+
+    result = env.step(
+        {
+            "coordinator_action": {
+                "price_deltas": [0] * env.num_stations,
+                "emergency_target_station": 0,
+            },
+            "station_actions": [1] * env.num_stations,
+        }
+    )
+    assert len(result) == 5
+    next_obs, reward, terminated, truncated, step_info = result
+    assert isinstance(next_obs, dict)
+    assert isinstance(reward, float)
+    assert isinstance(terminated, bool)
+    assert isinstance(truncated, bool)
+    assert isinstance(step_info, dict)
+    assert isinstance(env.state(), dict)
+
+
+def validate_reward_and_grader() -> None:
+    env = MultiAgentEVChargingGridEnv()
+    env.reset(seed=42)
+    reward = env._compute_reward(
+        {
+            "vehicles_served": 4.0,
+            "solar_kwh_used": 20.0,
+            "emergency_served": 1.0,
+            "avg_wait_time": 3.0,
+            "queue_length": 5.0,
+            "grid_overload": 2.0,
+        }
+    )
+    expected_reward = (
+        2.0 * 4.0
+        + 1.5 * 20.0
+        + 5.0 * 1.0
+        - 0.5 * 3.0
+        - 1.0 * 5.0
+        - 3.0 * 2.0
+    ) / 10.0
+    assert reward == expected_reward
+
+    score = grade_episode(
+        {
+            "served_ratio": 0.8,
+            "solar_usage_ratio": 0.5,
+            "normalized_wait_time": 0.25,
+        }
+    )
+    expected_score = 0.4 * 0.8 + 0.3 * 0.5 + 0.3 * (1.0 - 0.25)
+    assert abs(score - expected_score) < 1e-9
+
+
+def validate_inference() -> None:
+    source = _read("inference.py")
+    for marker in ("[START]", "[STEP]", "[END]", "os.getenv", "OpenAI", "HF_TOKEN"):
+        assert marker in source, f"Missing inference marker: {marker}"
+
+    logs, result = inference.capture_run_output(task_id="easy", steps=5, seed=42)
+    assert "[START]" in logs
+    assert "[STEP] step=0 reward=" in logs
+    assert "[END]" in logs
+    assert isinstance(result["total_reward"], float)
+    assert isinstance(result["summary"], str)
+    json.dumps(result)
+
+
+def validate_api() -> None:
+    client = TestClient(app)
+    reset_response = client.post("/reset", json={"seed": 42, "task_id": "easy"})
+    assert reset_response.status_code == 200
+    assert "observation" in reset_response.json()
+
+    step_response = client.post(
+        "/step",
+        json={
+            "action": {
+                "coordinator_action": {
+                    "price_deltas": [0] * 10,
+                    "emergency_target_station": 0,
+                },
+                "station_actions": [1] * 10,
+            }
+        },
+    )
+    assert step_response.status_code == 200
+    assert "reward" in step_response.json()
+
+    state_response = client.get("/state")
+    assert state_response.status_code == 200
+    assert "observation" in state_response.json()
+
+
+def validate_hf_server_and_docker() -> None:
+    api_source = _read("ev_charging_grid_env/api/server.py")
+    assert 'uvicorn.run(app, host="0.0.0.0", port=7860)' in api_source
+
+    dockerfile = _read("Dockerfile")
+    assert "FROM python:3.11-slim" in dockerfile
+    assert "WORKDIR /app" in dockerfile
+    assert "COPY . ." in dockerfile
+    assert "RUN pip install -r requirements.txt" in dockerfile
+    assert 'CMD ["python", "api/server.py"]' in dockerfile
+
+
+def main() -> int:
+    validators = [
+        validate_structure,
+        validate_imports,
+        validate_openenv_yaml,
+        validate_environment,
+        validate_reward_and_grader,
+        validate_inference,
+        validate_api,
+        validate_hf_server_and_docker,
+    ]
+    for validator in validators:
+        validator()
+    print("round1: 100% pass")
+    return 0
 
 
 if __name__ == "__main__":
-    success = run_validation()
-    sys.exit(0 if success else 1)
+    raise SystemExit(main())

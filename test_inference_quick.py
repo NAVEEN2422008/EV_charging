@@ -1,21 +1,21 @@
-#!/usr/bin/env python
-"""Quick test of inference functions."""
+"""Quick inference smoke test."""
 
-from inference import run_simulation, call_llm_analyze
+from __future__ import annotations
 
-print("Testing run_simulation()...")
-result = run_simulation(steps=10, seed=42)
-print(f"✓ run_simulation() works")
-print(f"  Total reward: {result['simulation']['total_reward']:.2f}")
-print(f"  Steps completed: {result['simulation']['steps']}")
-print(f"  Mean reward: {result['metrics']['mean_reward']:.4f}")
-print(f"  Status: {result['status']}")
+from inference import call_llm_analyze, run_simulation
 
-print("\nTesting call_llm_analyze()...")
-try:
-    analysis = call_llm_analyze({"test": "data"})
-    print(f"✓ call_llm_analyze() callable (requires API key to fully test)")
-except Exception as e:
-    print(f"✓ call_llm_analyze() callable (expected: {type(e).__name__} due to missing API credentials)")
 
-print("\nAll inference functions are working correctly!")
+def main() -> int:
+    result = run_simulation(steps=10, seed=42, emit_logs=False)
+    assert result["status"] == "success"
+    assert "simulation" in result
+    assert "metrics" in result
+    summary = call_llm_analyze({"total_reward": result["simulation"]["total_reward"]})
+    assert isinstance(summary, str)
+    print("inference: ok")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+

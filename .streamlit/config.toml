@@ -1,25 +1,12 @@
-[client]
-showErrorDetails = false
-toolbarMode = "minimal"
+[theme]
+base = "dark"
+primaryColor = "#13d47a"
+backgroundColor = "#0a1020"
+secondaryBackgroundColor = "#11192d"
+textColor = "#edf3ff"
+font = "sans serif"
 
 [server]
 headless = true
-runOnSave = false
-port = 7860
-address = "0.0.0.0"
-maxUploadSize = 200
+enableCORS = false
 enableXsrfProtection = false
-enableCORS = true
-
-[logger]
-level = "warning"
-
-[theme]
-primaryColor = "#00C2FF"
-backgroundColor = "#060c14"
-secondaryBackgroundColor = "#091828"
-textColor = "#c9d8e8"
-font = "sans serif"
-
-[browser]
-gatherUsageStats = false
