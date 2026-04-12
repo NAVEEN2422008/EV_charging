@@ -93,8 +93,8 @@ def generate_task(config: dict[str, Any]) -> TaskConfig:
     
     solar_count = max(1, min(num_stations, round(num_stations * solar_station_ratio)))
 
-    scenario = str(config.get("traffic_pattern", "mixed"))
-    rush_multiplier = 2.0 if scenario == "rush_hour" else 1.0
+    scenario = str(config.get("traffic_pattern", config.get("task_id", "mixed")))
+    rush_multiplier = 2.0 if scenario == "rush_hour" or scenario == "hard" else 1.0
     if scenario == "off_peak":
         rush_multiplier = 0.7
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 from typing import Any
 
 
@@ -36,7 +37,10 @@ def compute_step_reward(state: dict[str, Any], events: dict[str, float], config:
     reward += fast_service_bonus * quick_service
     reward -= emergency_bonus * 1.2 * emergency_missed
     reward -= travel_weight * float(events.get("travel_distance_km", 0.0))
-    return float(max(-reward_clip, min(reward_clip, reward)))
+    # Normalize to [0, 1] range using sigmoid-inspired scaling
+    # Assuming typical rewards are within [-reward_clip, reward_clip]
+    normalized_reward = 1.0 / (1.0 + np.exp(-reward / (0.2 * reward_clip)))
+    return float(normalized_reward)
 
 
 def compute_episode_summary_metrics(episode_events: dict[str, float], episode_steps: int) -> dict[str, float]:

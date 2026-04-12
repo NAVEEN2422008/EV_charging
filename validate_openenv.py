@@ -8,7 +8,7 @@ import numpy as np
 
 try:
     from ev_charging_grid_env.envs.ev_charging_env import MultiAgentEVChargingGridEnv
-    from ev_charging_grid_env.agents import CoordinatorAgent, StationAgent
+    from ev_charging_grid_env.agents import HeuristicCoordinatorAgent, HeuristicStationAgent
     from ev_charging_grid_env.graders import grade_episode
     print("All imports successful")
 except ImportError as e:
@@ -23,17 +23,13 @@ def test_env_reset_step() -> bool:
         env = MultiAgentEVChargingGridEnv({"task_id": "medium"})
         obs, info = env.reset(seed=42)
 
-        coord_agent = CoordinatorAgent()
-        station_agent = StationAgent()
+        coord_agent = HeuristicCoordinatorAgent()
+        station_agent = HeuristicStationAgent()
 
         coord_action = coord_agent.act(obs)
         station_actions = []
-        for row in obs["station_features"]:
-            action = station_agent.act({
-                "queue_length": int(row[0]),
-                "free_chargers": int(row[6]),
-                "emergency_queue": int(row[5])
-            })
+        for i in range(env.num_stations):
+            action = station_agent.act(i, obs, coord_action)
             station_actions.append(action)
 
         action = {
@@ -51,6 +47,8 @@ def test_env_reset_step() -> bool:
         return True
     except Exception as e:
         print(f"  Error: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -62,18 +60,14 @@ def test_reward_normalization() -> bool:
         obs, _ = env.reset(seed=42)
 
         rewards = []
-        for _ in range(30):
-            coord_agent = CoordinatorAgent()
-            station_agent = StationAgent()
+        coord_agent = HeuristicCoordinatorAgent()
+        station_agent = HeuristicStationAgent()
 
+        for _ in range(30):
             coord_action = coord_agent.act(obs)
             station_actions = []
-            for row in obs["station_features"]:
-                action = station_agent.act({
-                    "queue_length": int(row[0]),
-                    "free_chargers": int(row[6]),
-                    "emergency_queue": int(row[5])
-                })
+            for i in range(env.num_stations):
+                action = station_agent.act(i, obs, coord_action)
                 station_actions.append(action)
 
             action = {
@@ -108,18 +102,14 @@ def test_grader_normalization() -> bool:
         env = MultiAgentEVChargingGridEnv({"task_id": "medium"})
         obs, _ = env.reset(seed=42)
 
-        coord_agent = CoordinatorAgent()
-        station_agent = StationAgent()
+        coord_agent = HeuristicCoordinatorAgent()
+        station_agent = HeuristicStationAgent()
 
         for _ in range(min(50, env.task.episode_length)):
             coord_action = coord_agent.act(obs)
             station_actions = []
-            for row in obs["station_features"]:
-                action = station_agent.act({
-                    "queue_length": int(row[0]),
-                    "free_chargers": int(row[6]),
-                    "emergency_queue": int(row[5])
-                })
+            for i in range(env.num_stations):
+                action = station_agent.act(i, obs, coord_action)
                 station_actions.append(action)
 
             action = {
@@ -152,7 +142,7 @@ def test_task_definitions() -> bool:
             env = MultiAgentEVChargingGridEnv({"task_id": task_id})
             obs, info = env.reset(seed=42)
 
-            assert env.task.id == task_id
+            assert env.task_id == task_id
             assert env.task.episode_length > 0
 
             print(f"  OK: Task '{task_id}' valid")
