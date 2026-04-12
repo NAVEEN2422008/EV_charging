@@ -86,7 +86,8 @@ def reset() -> tuple[dict, int]:
             "success": True
         }), 200
     try:
-        data = request.get_json() or {}
+        # Use force=True to ignore Content-Type header (fixes 415 error)
+        data = request.get_json(force=True, silent=True) or {}
         seed = data.get("seed", None)
         config = data.get("config", {})
         
@@ -126,8 +127,9 @@ def step() -> tuple[dict, int]:
             "success": True
         }), 200
     try:
-        data = request.get_json()
-        if not data or "action" not in data:
+        # Use force=True to ignore Content-Type header (fixes 415 error)
+        data = request.get_json(force=True, silent=True)
+        if data is None or "action" not in data:
             return jsonify({"error": "Missing action", "success": False}), 400
         
         action = data.get("action")
