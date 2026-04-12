@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ev-charging-grid-env"
-version = "0.1.0"
+version = "1.0.0"
 description = "Multi-agent EV charging grid optimization environment for RL research."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,23 +12,26 @@ dependencies = [
   "gymnasium",
   "pettingzoo",
   "numpy",
-  "pydantic",
+  "pydantic>=2.0.0",
   "matplotlib",
   "pyyaml",
-  "torch",
-  "tensorboard",
   "streamlit",
   "plotly",
   "pandas",
   "flask",
   "flask-cors",
-  "openai",
+  "openai>=1.30.0",
   "requests",
-  "openenv-core",
+  "openenv-core>=0.2.0",
 ]
 
 [project.scripts]
 server = "server.app:main"
+
+[tool.openenv]
+entry_point = "server.app:main"
+server_module = "server.app"
+server_function = "main"
 
 [tool.setuptools.packages.find]
 include = ["ev_charging_grid_env*", "server*"]

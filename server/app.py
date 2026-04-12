@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -14,11 +13,39 @@ import numpy as np
 from ev_charging_grid_env.envs.ev_charging_env import MultiAgentEVChargingGridEnv
 
 # ──────────────────────────────────────────────────────────────────────────────
-# MODELS
+# TASK ID → ENVIRONMENT CONFIG MAP (must match openenv.yaml task ids)
+# ──────────────────────────────────────────────────────────────────────────────
+
+TASK_REGISTRY: dict[str, dict[str, Any]] = {
+    "basic_grid_operation": {
+        "num_stations": 2,
+        "base_arrival_rate": 4.0,
+        "emergency_arrival_prob": 0.02,
+        "episode_length": 120,
+    },
+    "queue_optimization": {
+        "num_stations": 4,
+        "base_arrival_rate": 6.0,
+        "emergency_arrival_prob": 0.05,
+        "episode_length": 180,
+    },
+    "full_grid_management": {
+        "num_stations": 6,
+        "base_arrival_rate": 8.0,
+        "emergency_arrival_prob": 0.08,
+        "episode_length": 240,
+    },
+}
+
+DEFAULT_TASK_ID = "basic_grid_operation"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PYDANTIC MODELS
 # ──────────────────────────────────────────────────────────────────────────────
 
 class ResetRequest(BaseModel):
-    seed: int | None = None
+    task_id: Optional[str] = None
+    seed: Optional[int] = None
     config: dict[str, Any] = Field(default_factory=dict)
 
 class StepRequest(BaseModel):
@@ -34,9 +61,10 @@ app.url_map.strict_slashes = False
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global environment instance
+# Global state
 _env_instance: MultiAgentEVChargingGridEnv | None = None
 _last_observation: dict[str, Any] | None = None
+_current_task_id: str = DEFAULT_TASK_ID
 
 
 def get_env() -> MultiAgentEVChargingGridEnv:
@@ -57,8 +85,7 @@ def serialize_for_json(obj: Any) -> Any:
         return {key: serialize_for_json(value) for key, value in obj.items()}
     elif isinstance(obj, (list, tuple)):
         return [serialize_for_json(item) for item in obj]
-    else:
-        return obj
+    return obj
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -67,233 +94,156 @@ def serialize_for_json(obj: Any) -> Any:
 
 
 @app.route("/", methods=["GET"])
-def root() -> tuple[dict, int]:
-    """Root endpoint."""
+def root() -> tuple:
     return jsonify({
         "name": "EV Charging Grid Optimizer API",
         "version": "1.0.0",
-        "endpoints": [
-            "GET /",
-            "GET /health",
-            "POST /reset",
-            "POST /step",
-            "GET /state",
-            "GET /info",
-        ]
+        "tasks": list(TASK_REGISTRY.keys()),
+        "endpoints": ["GET /", "GET /health", "POST /reset", "POST /step", "GET /state", "GET /tasks"],
     }), 200
 
 
 @app.route("/health", methods=["GET"])
-def health() -> tuple[dict, int]:
-    """Health check endpoint."""
-    return jsonify({"status": "healthy", "service": "ev-charging-grid-env"}), 200
+def health() -> tuple:
+    env = get_env()
+    return jsonify({
+        "status": "healthy",
+        "service": "ev-charging-grid-env",
+        "current_task": _current_task_id,
+        "available_tasks": list(TASK_REGISTRY.keys()),
+        "num_stations": env.num_stations,
+    }), 200
+
+
+@app.route("/tasks", methods=["GET"])
+def list_tasks() -> tuple:
+    """List all available tasks — required for OpenEnv task validation."""
+    tasks = []
+    for task_id, cfg in TASK_REGISTRY.items():
+        tasks.append({
+            "id": task_id,
+            "num_stations": cfg["num_stations"],
+            "episode_length": cfg["episode_length"],
+        })
+    return jsonify({"tasks": tasks, "success": True}), 200
 
 
 @app.route("/reset", methods=["GET", "POST"])
-def reset() -> tuple[dict, int]:
-    """Reset environment endpoint (OpenEnv compatible)."""
+def reset() -> tuple:
+    """Reset environment — now accepts task_id to switch tasks."""
     if request.method == "GET":
-        return jsonify({
-            "message": "Reset endpoint. Use POST to reset the environment.",
-            "success": True
-        }), 200
+        return jsonify({"message": "Use POST to reset.", "success": True}), 200
     try:
         raw_data = request.get_json(force=True, silent=True) or {}
         try:
             req = ResetRequest(**raw_data)
         except ValidationError as ve:
             return jsonify({"error": ve.errors(), "success": False}), 400
-            
-        seed = req.seed
-        config = req.config
-        
-        logger.info(f"Reset request: seed={seed}")
-        
-        global _env_instance
-        if config:
-            _env_instance = MultiAgentEVChargingGridEnv(config=config)
-        else:
-            _env_instance = get_env()
-        
-        obs, info = _env_instance.reset(seed=seed)
-        
-        global _last_observation
+
+        # Resolve task config
+        task_id = req.task_id or DEFAULT_TASK_ID
+        if task_id not in TASK_REGISTRY:
+            return jsonify({
+                "error": f"Unknown task_id '{task_id}'. Valid: {list(TASK_REGISTRY.keys())}",
+                "success": False,
+            }), 400
+
+        global _env_instance, _last_observation, _current_task_id
+        _current_task_id = task_id
+
+        # Merge task config with any extra config from request
+        task_config = {**TASK_REGISTRY[task_id], **req.config}
+        logger.info(f"Reset: task={task_id} seed={req.seed} config={task_config}")
+
+        _env_instance = MultiAgentEVChargingGridEnv(config=task_config)
+        obs, info = _env_instance.reset(seed=req.seed)
         _last_observation = obs
-        
+
         return jsonify({
             "observation": serialize_for_json(obs),
             "info": serialize_for_json(info),
+            "task_id": task_id,
             "success": True,
         }), 200
-        
+
     except Exception as e:
         logger.error(f"Reset failed: {e}", exc_info=True)
-        return jsonify({
-            "error": str(e),
-            "success": False,
-        }), 400
+        return jsonify({"error": str(e), "success": False}), 400
 
 
 @app.route("/step", methods=["GET", "POST"])
-def step() -> tuple[dict, int]:
-    """Step environment endpoint (OpenEnv compatible)."""
+def step() -> tuple:
+    """Step the environment."""
     if request.method == "GET":
-        return jsonify({
-            "message": "Step endpoint. Use POST to execute a step.",
-            "success": True
-        }), 200
+        return jsonify({"message": "Use POST to step.", "success": True}), 200
     try:
         raw_data = request.get_json(force=True, silent=True)
         if raw_data is None:
-             return jsonify({"error": "Missing JSON body", "success": False}), 400
-             
+            return jsonify({"error": "Missing JSON body", "success": False}), 400
+
         try:
             req = StepRequest(**raw_data)
         except ValidationError as ve:
             return jsonify({"error": ve.errors(), "success": False}), 400
 
-        action = req.action
         env = get_env()
-        obs, reward, terminated, truncated, info = env.step(action)
-        
+        obs, reward, terminated, truncated, info = env.step(req.action)
+
         global _last_observation
         _last_observation = obs
-        
+
         return jsonify({
             "observation": serialize_for_json(obs),
             "reward": float(reward),
             "terminated": bool(terminated),
             "truncated": bool(truncated),
+            "done": bool(terminated or truncated),
             "info": serialize_for_json(info),
             "success": True,
         }), 200
-        
+
     except Exception as e:
         logger.error(f"Step failed: {e}", exc_info=True)
         return jsonify({"error": str(e), "success": False}), 400
 
 
 @app.route("/state", methods=["GET"])
-def get_state() -> tuple[dict, int]:
-    """Get current environment state."""
-    try:
-        global _last_observation
-        if _last_observation is None:
-            env = get_env()
-            obs, _ = env.reset()
-            _last_observation = obs
-        
-        return jsonify({
-            "observation": serialize_for_json(_last_observation),
-            "success": True,
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Get state failed: {e}", exc_info=True)
-        return jsonify({"error": str(e), "success": False}), 400
-
-
-@app.route("/info", methods=["GET"])
-def get_info() -> tuple[dict, int]:
-    """Get environment info."""
-    try:
+def get_state() -> tuple:
+    global _last_observation
+    if _last_observation is None:
         env = get_env()
-        return jsonify({
-            "info": {
-                "num_stations": env.num_stations,
-                "observation_space": str(env.observation_space),
-                "action_space": str(env.action_space),
-            },
-            "success": True,
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Get info failed: {e}", exc_info=True)
-        return jsonify({"error": str(e), "success": False}), 400
+        obs, _ = env.reset()
+        _last_observation = obs
+    return jsonify({"observation": serialize_for_json(_last_observation), "success": True}), 200
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # ERROR HANDLERS
 # ──────────────────────────────────────────────────────────────────────────────
 
-
 @app.errorhandler(404)
-def not_found(error: Any) -> tuple[dict, int]:
-    """Handle 404 errors."""
-    return jsonify({
-        "error": "Endpoint not found",
-        "path": request.path,
-        "method": request.method,
-    }), 404
-
+def not_found(error: Any) -> tuple:
+    return jsonify({"error": "Not found", "path": request.path}), 404
 
 @app.errorhandler(405)
-def method_not_allowed(error: Any) -> tuple[dict, int]:
-    """Handle 405 errors."""
-    return jsonify({
-        "error": "Method not allowed",
-        "path": request.path,
-        "method": request.method,
-    }), 405
-
+def method_not_allowed(error: Any) -> tuple:
+    return jsonify({"error": "Method not allowed", "path": request.path, "method": request.method}), 405
 
 @app.errorhandler(500)
-def internal_error(error: Any) -> tuple[dict, int]:
-    """Handle 500 errors."""
-    logger.error(f"Internal error: {error}", exc_info=True)
-    return jsonify({
-        "error": "Internal server error",
-        "message": str(error),
-    }), 500
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# ERROR HANDLERS (JSON-only responses)
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-@app.errorhandler(405)
-def method_not_allowed(error: Any) -> tuple[dict, int]:
-    """Handle 405 Method Not Allowed - return JSON instead of HTML."""
-    return jsonify({
-        "error": "Method not allowed",
-        "method": request.method,
-        "path": request.path,
-        "allowed_methods": ["POST"] if request.path == "/reset" else ["GET", "POST"],
-    }), 405
-
-
-@app.errorhandler(404)
-def not_found(error: Any) -> tuple[dict, int]:
-    """Handle 404 Not Found - return JSON instead of HTML."""
-    return jsonify({
-        "error": "Endpoint not found",
-        "path": request.path,
-        "method": request.method,
-    }), 404
-
-
-@app.errorhandler(500)
-def internal_error(error: Any) -> tuple[dict, int]:
-    """Handle 500 Internal Server Error."""
-    logger.error(f"Internal error: {error}", exc_info=True)
-    return jsonify({
-        "error": "Internal server error",
-        "message": str(error),
-    }), 500
+def internal_error(error: Any) -> tuple:
+    return jsonify({"error": "Internal server error", "message": str(error)}), 500
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MAIN
 # ──────────────────────────────────────────────────────────────────────────────
 
-
 def main() -> None:
     import argparse
-    parser = argparse.ArgumentParser(description="OpenEnv API Server")
-    parser.add_argument("--host", default="0.0.0.0", help="Server host")
-    parser.add_argument("--port", type=int, default=5000, help="Server port")
-    parser.add_argument("--debug", action="store_true", help="Debug mode")
+    parser = argparse.ArgumentParser(description="OpenEnv EV Charging API Server")
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=5000)
+    parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
     logger.info(f"Starting server on {args.host}:{args.port}")
     app.run(host=args.host, port=args.port, debug=args.debug)
