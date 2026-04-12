@@ -205,20 +205,40 @@ def run_task(task_id: str) -> float:
 
 
 # ──────────────────────────────────────────────────────────
-# MAIN — run all 3 tasks so validator sees all graders
+# LLM CLIENT (required by validate_openenv.py)
 
-def main() -> None:
-    """Entry point: run all tasks unless MY_ENV_V4_TASK overrides."""
+def get_llm_client() -> Optional[OpenAI]:
+    """Return OpenAI client using env vars. Called by local validator."""
+    api_key = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+    if not api_key:
+        raise ValueError("HF_TOKEN or API_KEY environment variable must be set")
+    return OpenAI(base_url=API_BASE_URL, api_key=api_key)
+
+
+def run() -> Dict[str, Any]:
+    """Run all tasks and return summary dict. Called by local validate_openenv.py."""
     specific_task = os.getenv("MY_ENV_V4_TASK")
     tasks_to_run  = [specific_task] if specific_task else ALL_TASKS
 
     all_scores: Dict[str, float] = {}
+    total_reward = 0.0
     for task_id in tasks_to_run:
         score = run_task(task_id)
         all_scores[task_id] = score
-        print("", flush=True)  # blank line between tasks
+        total_reward += score
+        print("", flush=True)
 
-    print(json.dumps({"scores": all_scores}, indent=2), flush=True)
+    return {
+        "status": "success",
+        "total_reward": total_reward,
+        "scores": all_scores,
+    }
+
+
+def main() -> None:
+    """Entry point: run all tasks unless MY_ENV_V4_TASK overrides."""
+    results = run()
+    print(json.dumps(results, indent=2), flush=True)
 
 
 if __name__ == "__main__":

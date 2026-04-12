@@ -1,6 +1,7 @@
 # Submit to: HuggingFace Spaces tagged with 'openenv'
 name: ev-charging-grid-env
 version: "1.0.0"
+entrypoint: ev_charging_grid_env.envs.ev_charging_env:MultiAgentEVChargingGridEnv
 description: >
   Multi-Agent EV Charging Grid Optimization Environment.
   An AI agent learns to coordinate multiple EV charging stations, optimize
