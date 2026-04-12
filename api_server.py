@@ -216,6 +216,42 @@ def internal_error(error: Any) -> tuple[dict, int]:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# ERROR HANDLERS (JSON-only responses)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@app.errorhandler(405)
+def method_not_allowed(error: Any) -> tuple[dict, int]:
+    """Handle 405 Method Not Allowed - return JSON instead of HTML."""
+    return jsonify({
+        "error": "Method not allowed",
+        "method": request.method,
+        "path": request.path,
+        "allowed_methods": ["POST"] if request.path == "/reset" else ["GET", "POST"],
+    }), 405
+
+
+@app.errorhandler(404)
+def not_found(error: Any) -> tuple[dict, int]:
+    """Handle 404 Not Found - return JSON instead of HTML."""
+    return jsonify({
+        "error": "Endpoint not found",
+        "path": request.path,
+        "method": request.method,
+    }), 404
+
+
+@app.errorhandler(500)
+def internal_error(error: Any) -> tuple[dict, int]:
+    """Handle 500 Internal Server Error."""
+    logger.error(f"Internal error: {error}", exc_info=True)
+    return jsonify({
+        "error": "Internal server error",
+        "message": str(error),
+    }), 500
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # MAIN
 # ──────────────────────────────────────────────────────────────────────────────
 
