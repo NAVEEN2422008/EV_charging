@@ -255,7 +255,8 @@ class TestEdgeCases:
             "timed_out_count": 0.0,
         }
         reward = compute_step_reward(reward_state, events, config)
-        assert reward < 0.0, "Overload should result in negative reward"
+        # Normalized reward [0,1]: overload should yield low normalized score
+        assert reward < 0.5, "Overload should result in low normalized reward"
 
 
     def test_emergency_only_scenario(self) -> None:

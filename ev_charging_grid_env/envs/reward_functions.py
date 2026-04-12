@@ -37,10 +37,11 @@ def compute_step_reward(state: dict[str, Any], events: dict[str, float], config:
     reward += fast_service_bonus * quick_service
     reward -= emergency_bonus * 1.2 * emergency_missed
     reward -= travel_weight * float(events.get("travel_distance_km", 0.0))
-    # Normalize to [0, 1] range using sigmoid-inspired scaling
-    # Assuming typical rewards are within [-reward_clip, reward_clip]
-    normalized_reward = 1.0 / (1.0 + np.exp(-reward / (0.2 * reward_clip)))
-    return float(normalized_reward)
+    # Clip to the configured reward range so extreme values remain bounded.
+    reward = np.clip(reward, -reward_clip, reward_clip)
+    # Normalize to [0, 1] range for OpenEnv compatibility using the clipping bound
+    normalized_reward = (reward + reward_clip) / (2.0 * reward_clip)
+    return float(np.clip(normalized_reward, 0.0, 1.0))
 
 
 def compute_episode_summary_metrics(episode_events: dict[str, float], episode_steps: int) -> dict[str, float]:
