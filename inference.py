@@ -21,6 +21,7 @@ from ev_charging_grid_env.envs.ev_charging_env import MultiAgentEVChargingGridEn
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
+HF_TOKEN = os.getenv("HF_TOKEN")
 SIMULATION_STEPS = int(os.getenv("SIMULATION_STEPS", "30"))
 RANDOM_SEED = int(os.getenv("RANDOM_SEED", "42"))
 
