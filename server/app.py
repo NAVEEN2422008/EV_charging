@@ -137,33 +137,30 @@ def reset() -> tuple:
         raw_data = request.get_json(force=True, silent=True) or {}
         try:
             req = ResetRequest(**raw_data)
-        except ValidationError as ve:
-            return jsonify({"error": ve.errors(), "success": False}), 400
+        except ValidationError as e:
+            return jsonify({"success": False, "error": str(e)}), 400
 
         # Resolve task config
         task_id = req.task_id or DEFAULT_TASK_ID
         if task_id not in TASK_REGISTRY:
-            return jsonify({
-                "error": f"Unknown task_id '{task_id}'. Valid: {list(TASK_REGISTRY.keys())}",
-                "success": False,
-            }), 400
+            return jsonify({"success": False, "error": f"Unknown task_id: {task_id}"}), 400
 
-        global _env_instance, _last_observation, _current_task_id
+        global _env_instance, _current_task_id
         _current_task_id = task_id
 
-        # Merge task config with any extra config from request
+        # Merge registry config with any overrides from request
         task_config = {**TASK_REGISTRY[task_id], **req.config}
-        logger.info(f"Reset: task={task_id} seed={req.seed} config={task_config}")
+        task_config["task_id"] = task_id # Ensure it's in the env config
 
+        # ALWAYS create a fresh instance for the new task to ensure num_stations etc are correct
         _env_instance = MultiAgentEVChargingGridEnv(config=task_config)
         obs, info = _env_instance.reset(seed=req.seed)
-        _last_observation = obs
 
         return jsonify({
+            "success": True,
             "observation": serialize_for_json(obs),
             "info": serialize_for_json(info),
-            "task_id": task_id,
-            "success": True,
+            "task_id": task_id
         }), 200
 
     except Exception as e:

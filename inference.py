@@ -111,30 +111,74 @@ def env_step(action: dict) -> dict:
     return env_request("/step", "POST", {"action": action})
 
 # ──────────────────────────────────────────────────────────
-# ACTION BUILDER (deterministic heuristic policy)
+# LLM COORDINATOR AGENT
 
-def build_action(num_stations: int, step: int) -> dict:
-    """Deterministic heuristic: cycle through station priorities."""
-    emergency_target = step % num_stations
+def get_llm_action(client: OpenAI, num_stations: int, obs: dict, step: int) -> dict:
+    """Use LLM to decide coordinator actions (pricing and emergency routing)."""
+    try:
+        # Simplified observation summary for the prompt
+        station_info = obs.get("observation", {}).get("station_features", [])
+        queue_info   = obs.get("observation", {}).get("queue_lengths", [])
+        
+        prompt = f"""
+        Task: Coordinate {num_stations} EV charging stations.
+        Step: {step}
+        Queues: {queue_info}
+        Weather: {obs.get("observation", {}).get("weather", "unknown")}
+        
+        Decide:
+        1. price_deltas: Array of {num_stations} integers (-1, 0, or 1)
+        2. emergency_target_station: Index [0-{num_stations-1}]
+        
+        Return JSON only:
+        {{"price_deltas": [...], "emergency_target_station": idx}}
+        """
+
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            timeout=10
+        )
+        data = json.loads(response.choices[0].message.content)
+        
+        # Validate and sanitize response
+        price_deltas = data.get("price_deltas", [0] * num_stations)
+        if len(price_deltas) != num_stations:
+            price_deltas = [0] * num_stations
+            
+        target = int(data.get("emergency_target_station", 0)) % num_stations
+        
+        return {
+            "coordinator_action": {
+                "price_deltas": price_deltas,
+                "emergency_target_station": target,
+            },
+            "station_actions": [1] * num_stations,
+        }
+    except Exception as e:
+        # Fallback to heuristic if LLM fails
+        return build_heuristic_action(num_stations, step)
+
+
+def build_heuristic_action(num_stations: int, step: int) -> dict:
+    """Fallback heuristic policy."""
     return {
         "coordinator_action": {
             "price_deltas": [0] * num_stations,
-            "emergency_target_station": emergency_target,
+            "emergency_target_station": step % num_stations,
         },
-        "station_actions": [1] * num_stations,  # 1=accept all
+        "station_actions": [1] * num_stations,
     }
 
-# ──────────────────────────────────────────────────────────
-# LLM CLIENT (optional)
 
 def get_llm_client() -> Optional[OpenAI]:
-    api_key = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+    """Initialize OpenAI client pointing to the OpenEnv proxy."""
+    api_key = os.getenv("API_KEY") or os.getenv("HF_TOKEN")
     if not api_key:
         return None
-    try:
-        return OpenAI(base_url=API_BASE_URL, api_key=api_key)
-    except Exception:
-        return None
+    return OpenAI(base_url=API_BASE_URL, api_key=api_key)
+
 
 # ──────────────────────────────────────────────────────────
 # TASK RUNNER
@@ -150,48 +194,45 @@ def run_task(task_id: str) -> float:
 
     log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
 
+    # Initialize client (may be None if no API key present)
+    client = get_llm_client()
+
     try:
         obs = env_reset(task_id)
         if "error" in obs:
             print(f"[DEBUG] Reset error: {obs['error']}", flush=True)
-            # Graceful degradation – continue with fallback
             obs = {"success": False}
 
-        # Extract num_stations from reset observation if available
-        if isinstance(obs.get("observation"), dict):
-            ql = obs["observation"].get("queue_lengths", [0] * num_stations)
-            num_stations = len(ql)
-
         for step in range(1, max_steps + 1):
-            action  = build_action(num_stations, step)
-            result  = env_step(action)
-
-            if "error" in result:
-                print(f"[DEBUG] Step error: {result['error']}", flush=True)
-                reward = 0.0
-                done   = False
-                error  = result["error"][:80]
+            # Decision (LLM or Heuristic)
+            if client:
+                action = get_llm_action(client, num_stations, obs, step)
             else:
-                reward = float(result.get("reward", 0) or 0)
-                done   = bool(result.get("terminated") or result.get("truncated", False))
-                error  = None
-
-                # Update num_stations from live observation
-                obs_data = result.get("observation", {})
-                if isinstance(obs_data, dict):
-                    ql = obs_data.get("queue_lengths", [])
-                    if ql:
-                        num_stations = len(ql)
-
-            rewards.append(reward)
+                action = build_heuristic_action(num_stations, step)
+                
+            # Execute step
+            res = env_step(action)
             steps_taken = step
-            log_step(step=step, action=json.dumps(action, separators=(",", ":")), reward=reward, done=done, error=error)
+
+            if "error" in res:
+                error_msg = res["error"]
+                log_step(step, json.dumps(action), 0.0, False, error_msg)
+                rewards.append(0.0)
+                continue
+
+            reward = float(res.get("reward", 0.0))
+            done   = bool(res.get("terminated", False) or res.get("truncated", False))
+            obs    = res # update for next step observe
+            
+            rewards.append(reward)
+            log_step(step, json.dumps(action), reward, done, None)
 
             if done:
                 break
 
+        # Result calculation
         raw_score  = sum(rewards) / max(len(rewards), 1)
-        score      = max(0.01, min(0.99, raw_score))
+        score      = max(0.0, min(1.0, raw_score))
         success    = score >= SUCCESS_SCORE_THRESHOLD
 
     except Exception as exc:
