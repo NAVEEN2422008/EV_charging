@@ -9,17 +9,17 @@ try:
     res = urllib.request.urlopen(req)
     data = json.loads(res.read())
     run = data['workflow_runs'][0]
+    
     print(f"Run ID: {run['id']}, Status: {run['status']}, Conclusion: {run['conclusion']}")
     
     if run['status'] == 'completed' and run['conclusion'] != 'success':
-        # Get jobs
         jobs_url = run['jobs_url']
         req2 = urllib.request.Request(jobs_url, headers={'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'python'})
         res2 = urllib.request.urlopen(req2)
         jobs_data = json.loads(res2.read())
         for job in jobs_data['jobs']:
             if job['conclusion'] == 'failure':
-                print(f"Failed Job: {job['name']}")
+                print(f"Failed Job: {job['name']} (ID: {job['id']})")
                 for step in job['steps']:
                     if step['conclusion'] == 'failure':
                         print(f"  Failed Step: {step['name']}")

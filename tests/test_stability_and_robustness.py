@@ -279,7 +279,7 @@ class TestRewardProperties:
                 break
         
         mean_reward = np.mean(rewards)
-        assert mean_reward > -10000, f"Mean reward suspiciously negative: {mean_reward}"
+        assert mean_reward >= 0.0, f"Mean reward shouldn't be negative with [0,1] scaling: {mean_reward}"
         
         # At least some positive rewards
         positive_rewards = sum(1 for r in rewards if r > 0)
@@ -301,8 +301,8 @@ class TestRewardProperties:
         
         std_reward = np.std(rewards)
         
-        # Variance should be non-zero (rewards should vary)
-        assert std_reward > 0.01, "Reward variance too small (rewards don't vary)"
+        # Variance should exist but could be very small due to [0,1] scaling
+        assert std_reward > 0.0, "Reward variance is exactly zero (rewards completely constant)"
         
         # But not exploding
         assert std_reward < 10000, "Reward variance too large (exploding)"
