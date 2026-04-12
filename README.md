@@ -3,8 +3,8 @@ title: EV Charging Grid Optimizer
 emoji: ⚡
 colorFrom: purple
 colorTo: blue
-sdk: docker
-app_file: api/server.py
+sdk: streamlit
+app_file: app.py
 pinned: false
 ---
 
@@ -45,15 +45,28 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-### Option 1: Interactive Dashboard (Recommended for Demo)
+### Option 1: Interactive Dashboard (Recommended for Demo & HuggingFace Spaces)
 
+The dashboard is now the default interface on HuggingFace Spaces!
+
+**Local:**
 ```bash
 streamlit run app.py
 # Opens at http://localhost:8501
-# Features: real-time visualization, AI explainability, live metrics
 ```
 
-See [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md) for full dashboard documentation.
+**HuggingFace Spaces:**
+Visit: https://huggingface.co/spaces/NAVEENKUMAR24022008/EV
+
+**Dashboard Features:**
+- Real-time simulation with live visualization
+- 10-station charging grid with color-coded status
+- AI decision explainability
+- Performance charts and metrics
+- Interactive controls
+- Episode statistics
+
+See [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md) for full documentation.
 
 ### Option 2: Run Inference
 
