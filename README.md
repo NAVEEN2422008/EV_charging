@@ -45,13 +45,23 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-### Option 1: Run Inference
+### Option 1: Interactive Dashboard (Recommended for Demo)
+
+```bash
+streamlit run app.py
+# Opens at http://localhost:8501
+# Features: real-time visualization, AI explainability, live metrics
+```
+
+See [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md) for full dashboard documentation.
+
+### Option 2: Run Inference
 
 ```bash
 python inference.py
 ```
 
-### Option 2: Run API Server
+### Option 3: Run API Server
 
 ```bash
 python api/server.py
@@ -70,7 +80,7 @@ curl -X POST http://localhost:7860/step \
   -d '{"action": {"coordinator_action": {"price_deltas": [0,1,-1,0,0,0,0,0,0,0], "emergency_target_station": 0}, "station_actions": [1,0,1,2,1,0,1,0,1,0]}}'
 ```
 
-### Option 3: Docker
+### Option 4: Docker
 
 ```bash
 docker build -t ev-charging-grid .
