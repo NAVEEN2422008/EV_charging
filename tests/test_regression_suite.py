@@ -122,11 +122,11 @@ class TestNumericalStability:
         mean_reward = np.mean(rewards)
         std_reward = np.std(rewards)
 
-        # Not all zeros
-        assert std_reward > 0.1, "No reward variance"
-        # Not exploding
-        assert abs(mean_reward) < 50, f"Mean reward too large: {mean_reward}"
-        assert std_reward < 50, f"Std reward too large: {std_reward}"
+        # Not all zeros (variance should exist even in [0,1] range)
+        assert std_reward > 0.01, "No reward variance"
+        
+        # Within reasonable bounds [0, 1] as required by OpenEnv
+        assert 0.0 <= min(rewards) and max(rewards) <= 1.0, "Rewards must be normalized to [0,1]"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -445,14 +445,16 @@ class TestIntegration:
     def test_inference_with_advanced_features(self):
         """Test inference script with advanced features."""
         try:
-            import inference
+            from inference import run
+            import os
+            os.environ["SIMULATION_STEPS"] = "50"
+            os.environ["RANDOM_SEED"] = "42"
         except ImportError:
             pytest.skip("inference module not available")
 
-        result = inference.run_simulation(steps=50, seed=42)
+        result = run()
         assert result["status"] == "success"
-        assert "simulation" in result
-        assert "metrics" in result
+        assert "total_reward" in result
 
     def test_diagnostics_from_live_episode(self):
         """Test capturing diagnostics from live episode."""

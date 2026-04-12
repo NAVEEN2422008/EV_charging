@@ -146,8 +146,6 @@ def test_inference_import():
     try:
         import inference
         assert hasattr(inference, 'run')
-        assert hasattr(inference, 'run_simulation')
-        assert hasattr(inference, 'call_llm_analyze')
     except ImportError as e:
         pytest.skip(f"Inference module not available: {e}")
 
@@ -155,13 +153,14 @@ def test_inference_import():
 def test_inference_simulation_runs():
     """Test simulation runs without errors."""
     try:
-        from inference import run_simulation
-        result = run_simulation(steps=50, seed=42)
+        from inference import run
+        import os
+        os.environ["SIMULATION_STEPS"] = "50"
+        os.environ["RANDOM_SEED"] = "42"
+        result = run()
         
         assert result.get("status") == "success"
-        assert "simulation" in result
-        assert "metrics" in result
-        assert result["simulation"]["total_reward"] is not None
+        assert "total_reward" in result
     except ImportError:
         pytest.skip("Inference module not available")
 
@@ -169,8 +168,11 @@ def test_inference_simulation_runs():
 def test_inference_json_output():
     """Test inference outputs valid JSON."""
     try:
-        from inference import run_simulation
-        result = run_simulation(steps=50, seed=42)
+        from inference import run
+        import os
+        os.environ["SIMULATION_STEPS"] = "50"
+        os.environ["RANDOM_SEED"] = "42"
+        result = run()
         
         # Should be JSON-serializable
         json_str = json.dumps(result)
